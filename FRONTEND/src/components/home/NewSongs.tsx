@@ -93,7 +93,7 @@ const NewSongs = () => {
                                 url: (song as any).url || '',
                                 downloadUrl: (song as any).downloadUrl || []
                             } as any)}
-                            className="flex-shrink-0 w-[85%] snap-center cursor-pointer group"
+                            className="flex-shrink-0 w-[90%] snap-center cursor-pointer group"
                         >
                             {/* Large Album Art */}
                             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden mb-3">

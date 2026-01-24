@@ -24,7 +24,7 @@ export default function RootLayout({
 
         {/* Main Content Area */}
         <main className="flex-1 h-full overflow-y-auto md:ml-64 relative pb-20 md:pb-24 scroll-smooth bg-sidebar">
-          <div className="relative z-10 p-4 md:p-8 min-h-full max-w-7xl mx-auto">
+          <div className="relative z-10 p-2 md:p-8 min-h-full max-w-7xl mx-auto">
             {children}
           </div>
         </main>
