@@ -25,10 +25,10 @@ const SpeedDial = () => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const response = await fetchPlaylistById('110858205', 8); // Trending Today
+                const response = await fetchPlaylistById('110858205', 9); // Trending Today
 
                 if (response.success && response.data.songs) {
-                    setSongs(response.data.songs.slice(0, 8));
+                    setSongs(response.data.songs.slice(0, 9));
                 }
             } catch (error) {
                 console.error('Error fetching Speed Dial data:', error);
@@ -46,7 +46,7 @@ const SpeedDial = () => {
                 <div className="mb-4">
                     <div className="h-6 w-24 bg-white/10 rounded animate-pulse"></div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                     {[...Array(9)].map((_, i) => (
                         <div key={i} className="aspect-square bg-zinc-900 rounded-xl animate-pulse"></div>
                     ))}
@@ -63,7 +63,7 @@ const SpeedDial = () => {
             </div>
 
             {/* 3x3 Grid */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-2">
                 {songs.map((song) => (
                     <div
                         key={song.id}
