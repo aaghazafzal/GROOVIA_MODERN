@@ -38,14 +38,14 @@ const LastPlayed = () => {
     return (
         <>
             {/* Mobile View - Horizontal Scrolling Grid (4 rows max) */}
-            <div className="md:hidden px-4 py-3">
+            <div className="md:hidden py-3">
                 <div className="flex justify-between items-center mb-3">
                     <h2 className="text-2xl font-bold text-white">Last Played</h2>
                 </div>
 
                 {/* Horizontal Scrolling Container with Grid */}
                 <div className="overflow-x-scroll scrollbar-hide -mx-4 px-4 scroll-smooth">
-                    <div className="inline-grid grid-rows-4 grid-flow-col gap-3 auto-cols-[80%]">
+                    <div className="inline-grid grid-rows-4 grid-flow-col gap-3 auto-cols-[65%]">
                         {mobileSongs.map((song) => (
                             <div
                                 key={song.id}
@@ -127,7 +127,7 @@ const LastPlayed = () => {
                     ref={scrollRef}
                     className="overflow-x-auto scrollbar-hide scroll-smooth"
                 >
-                    <div className="inline-grid grid-rows-4 grid-flow-col gap-2 auto-cols-[47%]">
+                    <div className="inline-grid grid-rows-4 grid-flow-col gap-2 auto-cols-[48%]">
                         {desktopSongs.map((song) => (
                             <div
                                 key={song.id}
