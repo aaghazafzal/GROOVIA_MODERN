@@ -1,0 +1,330 @@
+﻿'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { api } from '@/lib/api';
+import { useMusicStore } from '@/store/useMusicStore';
+import Image from 'next/image';
+import Link from 'next/link';
+import he from 'he';
+import { BiPlay, BiDotsVerticalRounded, BiSearch } from 'react-icons/bi';
+import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
+
+interface SearchResults {
+    songs: any[];
+    albums: any[];
+    artists: any[];
+    playlists: any[];
+    topResult: any | null;
+}
+
+type FilterType = 'all' | 'songs' | 'albums' | 'artists' | 'playlists';
+
+const filters: { id: FilterType; label: string }[] = [
+    { id: 'all', label: 'All' },
+    { id: 'songs', label: 'Songs' },
+    { id: 'albums', label: 'Albums' },
+    { id: 'artists', label: 'Artists' },
+    { id: 'playlists', label: 'Playlists' },
+];
+
+// Helper to validate and get image URL
+const getValidImageUrl = (item: any, preferredSide?: number): string => {
+    try {
+        const url = preferredSide
+            ? item?.image?.[preferredSide]?.url || item?.image?.[0]?.url
+            : item?.image?.[2]?.url || item?.image?.[1]?.url || item?.image?.[0]?.url;
+
+        if (!url || typeof url !== 'string' || url.startsWith('<!doctype') || url.startsWith('<') || url.length < 10) {
+            return 'https://via.placeholder.com/300/1a1a1a/ffffff?text=No+Image'; // fallback
+        }
+        // Validate URL
+        new URL(url);
+        return url;
+    } catch {
+        return 'https://via.placeholder.com/300/1a1a1a/ffffff?text=No+Image'; // fallback
+    }
+};
+
+export default function SearchPage() {
+    const [query, setQuery] = useState('');
+    const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
+    const [results, setResults] = useState<SearchResults>({
+        songs: [],
+        albums: [],
+        artists: [],
+        playlists: [],
+        topResult: null,
+    });
+    const [loading, setLoading] = useState(false);
+    const playSong = useMusicStore((state) => state.playSong);
+
+    const songsScrollRef = useRef<HTMLDivElement>(null);
+    const albumsScrollRef = useRef<HTMLDivElement>(null);
+    const artistsScrollRef = useRef<HTMLDivElement>(null);
+    const playlistsScrollRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const searchTimeout = setTimeout(() => {
+            if (query.trim()) {
+                performSearch();
+            } else {
+                setResults({ songs: [], albums: [], artists: [], playlists: [], topResult: null });
+            }
+        }, 300);
+
+        return () => clearTimeout(searchTimeout);
+    }, [query, selectedFilter]);
+
+    const performSearch = async () => {
+        try {
+            setLoading(true);
+            let allResults: SearchResults = { songs: [], albums: [], artists: [], playlists: [], topResult: null };
+
+            // Fetch based on filter
+            if (selectedFilter === 'all' || selectedFilter === 'songs') {
+                try {
+                    const songsRes = await api.get('/search/songs', {
+                        params: { query, limit: selectedFilter === 'songs' ? 50 : 16 }
+                    });
+                    allResults.songs = songsRes.data?.data?.results || [];
+                } catch (err) {
+                    console.error('Songs search error:', err);
+                }
+            }
+
+            if (selectedFilter === 'all' || selectedFilter === 'albums') {
+                try {
+                    const albumsRes = await api.get('/search/albums', {
+                        params: { query, limit: selectedFilter === 'albums' ? 50 : 12 }
+                    });
+                    allResults.albums = albumsRes.data?.data?.results || [];
+                } catch (err) {
+                    console.error('Albums search error:', err);
+                }
+            }
+
+            if (selectedFilter === 'all' || selectedFilter === 'artists') {
+                try {
+                    const artistsRes = await api.get('/search/artists', {
+                        params: { query, limit: selectedFilter === 'artists' ? 50 : 12 }
+                    });
+                    allResults.artists = artistsRes.data?.data?.results || [];
+                } catch (err) {
+                    console.error('Artists search error:', err);
+                }
+            }
+
+            if (selectedFilter === 'all' || selectedFilter === 'playlists') {
+                try {
+                    const playlistsRes = await api.get('/search/playlists', {
+                        params: { query, limit: selectedFilter === 'playlists' ? 50 : 12 }
+                    });
+                    allResults.playlists = playlistsRes.data?.data?.results || [];
+                } catch (err) {
+                    console.error('Playlists search error:', err);
+                }
+            }
+
+            // Determine top result from combined results (only in 'all' filter)
+            if (selectedFilter === 'all') {
+                const queryLower = query.toLowerCase();
+
+                // Check for exact or close matches
+                const topSong = allResults.songs.find((s: any) => s.name?.toLowerCase().includes(queryLower));
+                const topAlbum = allResults.albums.find((a: any) => a.name?.toLowerCase().includes(queryLower));
+                const topArtist = allResults.artists.find((a: any) => a.name?.toLowerCase().includes(queryLower));
+                const topPlaylist = allResults.playlists.find((p: any) => p.name?.toLowerCase().includes(queryLower));
+
+                // Priority: Artist > Album > Playlist > Song
+                allResults.topResult = topArtist || topAlbum || topPlaylist || topSong || null;
+                if (allResults.topResult) {
+                    allResults.topResult.type = topArtist ? 'artist' : topAlbum ? 'album' : topPlaylist ? 'playlist' : 'song';
+                }
+            }
+
+            setResults(allResults);
+        } catch (error) {
+            console.error('Search error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleScroll = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
+        if (ref.current) {
+            const scrollAmount = 600;
+            ref.current.scrollBy({
+                left: direction === 'left' ? -scrollAmount : scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+    };
+
+    const hasResults = results.songs.length > 0 || results.albums.length > 0 ||
+        results.artists.length > 0 || results.playlists.length > 0;
+
+    return (
+        <div className="min-h-screen pb-32 md:pb-24 bg-sidebar">
+            {/* Search Header */}
+            <div className="pt-6 pb-4 px-4 md:px-6 bg-sidebar sticky top-0 z-30">
+                <div className="max-w-7xl mx-auto">
+                    {/* Search Input */}
+                    <div className="relative mb-4">
+                        <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={24} />
+                        <input
+                            type="text"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="Search songs, albums, artists, playlists..."
+                            className="w-full bg-zinc-900 text-white pl-14 pr-4 py-4 rounded-full text-base focus:outline-none focus:ring-2 focus:ring-primary"
+                            autoFocus
+                        />
+                    </div>
+
+                    {/* Filter Tabs */}
+                    {query && (
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                            {filters.map((filter) => (
+                                <button
+                                    key={filter.id}
+                                    onClick={() => setSelectedFilter(filter.id)}
+                                    className={`px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${selectedFilter === filter.id
+                                            ? 'bg-primary text-white shadow-lg shadow-primary/30'
+                                            : 'bg-zinc-900 text-gray-400 hover:bg-zinc-800 hover:text-white'
+                                        }`}
+                                >
+                                    {filter.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Search Results */}
+            <div className="px-4 md:px-6 pb-6 max-w-7xl mx-auto">
+                {!query && (
+                    <div className="text-center py-20">
+                        <BiSearch size={64} className="mx-auto text-gray-600 mb-4" />
+                        <h2 className="text-2xl font-bold text-white mb-2">Search Groovia</h2>
+                        <p className="text-gray-400">Find your favorite songs, albums, artists, and playlists</p>
+                    </div>
+                )}
+
+                {loading && query && (
+                    <div className="text-center py-20">
+                        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+                        <p className="text-gray-400 mt-4">Searching...</p>
+                    </div>
+                )}
+
+                {!loading && query && !hasResults && (
+                    <div className="text-center py-20">
+                        <p className="text-xl text-gray-400">No results found for "{query}"</p>
+                    </div>
+                )}
+
+                {!loading && query && hasResults && (
+                    <div className="space-y-8">
+                        {/* Top Result - Only in 'All' filter */}
+                        {selectedFilter === 'all' && results.topResult && (
+                            <div>
+                                <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Top Result</h2>
+                                <div className="bg-zinc-900/50 rounded-2xl p-6 max-w-md">
+                                    {results.topResult.type === 'artist' ? (
+                                        <Link href={`/artist/${results.topResult.id}`}>
+                                            <div className="flex flex-col items-center text-center">
+                                                <div className="w-32 h-32 rounded-full overflow-hidden mb-4 relative">
+                                                    <Image
+                                                        src={getValidImageUrl(results.topResult)}
+                                                        alt={results.topResult.name || 'Artist'}
+                                                        fill
+                                                        className="object-cover"
+                                                        sizes="128px"
+                                                    />
+                                                </div>
+                                                <h3 className="text-3xl font-bold text-white mb-2">{he.decode(results.topResult.name || '')}</h3>
+                                                <p className="text-gray-400 capitalize">{results.topResult.type}</p>
+                                            </div>
+                                        </Link>
+                                    ) : (
+                                        <div>
+                                            <div className="w-full aspect-square rounded-lg overflow-hidden mb-4 relative bg-zinc-800">
+                                                <Image
+                                                    src={getValidImageUrl(results.topResult)}
+                                                    alt={results.topResult.name || 'Item'}
+                                                    fill
+                                                    className="object-cover"
+                                                    sizes="300px"
+                                                />
+                                            </div>
+                                            <h3 className="text-2xl font-bold text-white mb-2">{he.decode(results.topResult.name || '')}</h3>
+                                            <p className="text-gray-400 capitalize">{results.topResult.type}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Songs Section */}
+                        {(selectedFilter === 'all' || selectedFilter === 'songs') && results.songs.length > 0 && (
+                            <div>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-2xl md:text-3xl font-bold text-white">Songs</h2>
+                                    {selectedFilter === 'all' && (
+                                        <div className="hidden md:flex gap-2">
+                                            <button onClick={() => handleScroll(songsScrollRef, 'left')} className="p-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white">
+                                                <IoChevronBack size={20} />
+                                            </button>
+                                            <button onClick={() => handleScroll(songsScrollRef, 'right')} className="p-2 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white">
+                                                <IoChevronForward size={20} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {selectedFilter === 'all' ? (
+                                    <div ref={songsScrollRef} className="overflow-x-auto scrollbar-hide scroll-smooth">
+                                        <div className="inline-grid grid-rows-4 grid-flow-col gap-2 auto-cols-[60%] md:auto-cols-[32%]">
+                                            {results.songs.slice(0, 16).map((song) => (
+                                                <div
+                                                    key={song.id}
+                                                    onClick={() => playSong({ ...song, type: 'song', url: song.url || '', downloadUrl: song.downloadUrl || [] })}
+                                                    className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group h-[68px]"
+                                                >
+                                                    <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-zinc-800">
+                                                        <Image src={getValidImageUrl(song, 1)} alt={song.name || 'Song'} fill className="object-cover" sizes="48px" />
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <BiPlay size={24} className="text-white" />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="text-white font-medium text-sm line-clamp-1">{he.decode(song.name || '')}</h3>
+                                                        <p className="text-gray-400 text-xs line-clamp-1">{song.artists?.primary?.map((a: any) => a.name).join(', ') || 'Unknown'}</p>
+                                                    </div>
+                                                    <BiDotsVerticalRounded size={18} className="text-gray-400 hover:text-white" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {results.songs.map((song) => (
+                                            <div key={song.id} onClick={() => playSong({ ...song, type: 'song', url: song.url || '', downloadUrl: song.downloadUrl || [] })} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group">
+                                                <div className="relative w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-zinc-800">
+                                                    <Image src={getValidImageUrl(song, 1)} alt={song.name || 'Song'} fill className="object-cover" sizes="56px" />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <BiPlay size={28} className="text-white" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className="text-white font-semibold text-sm line-clamp-1">{he.decode(song.name || '')}</h3>
+                                                    <p className="text-gray-400 text-xs line-clamp-1">{song.artists?.primary?.map((a: any) => a.name).join(', ') || 'Unknown'}</p>
+                                                </div>
+                                                <BiDotsVerticalRounded size={20} className="text-gray-400 hover:text-white" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
