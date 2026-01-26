@@ -163,7 +163,7 @@ const NewSongs = () => {
                 {/* Horizontal Scrollable Grid */}
                 <div
                     ref={scrollRef}
-                    className="overflow-x-auto scrollbar-hide scroll-smooth -mr-4 pr-4"
+                    className="overflow-x-auto scrollbar-hide scroll-smooth pr-0"
                 >
                     <div className="inline-flex gap-3">
                         {songs.map((song) => (
