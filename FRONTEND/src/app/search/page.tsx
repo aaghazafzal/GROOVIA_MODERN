@@ -285,7 +285,7 @@ export default function SearchPage() {
 
                                 {selectedFilter === 'all' ? (
                                     <div ref={songsScrollRef} className="overflow-x-auto scrollbar-hide scroll-smooth -mx-4 px-4">
-                                        <div className="inline-grid grid-rows-4 grid-flow-col gap-2 auto-cols-[90%] md:auto-cols-[32%]">
+                                        <div className="inline-grid grid-rows-4 grid-flow-col gap-2 auto-cols-[90%] md:auto-cols-[23%]">
                                             {results.songs.slice(0, 16).map((song) => (
                                                 <div
                                                     key={song.id}
