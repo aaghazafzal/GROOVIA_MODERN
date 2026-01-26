@@ -45,7 +45,7 @@ const LastPlayed = () => {
 
                 {/* Horizontal Scrolling Container with Grid */}
                 <div className="overflow-x-scroll scrollbar-hide -mx-4 px-4 scroll-smooth">
-                    <div className="inline-grid grid-rows-4 grid-flow-col gap-2 auto-cols-[90%]">
+                    <div className="inline-grid grid-rows-4 grid-flow-col gap-2 auto-cols-[98%]">
                         {mobileSongs.map((song) => (
                             <div
                                 key={song.id}
