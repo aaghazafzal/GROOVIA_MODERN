@@ -106,14 +106,14 @@ const TrendingOnSocials = () => {
     return (
         <>
             {/* Mobile View - Horizontal Scrolling Grid (4 rows max) */}
-            <div className="md:hidden px-4 py-3">
+            <div className="md:hidden py-3">
                 <div className="flex justify-between items-center mb-3">
                     <h2 className="text-2xl font-bold text-white">Trending On Socials</h2>
                 </div>
 
                 {/* Horizontal Scrolling Container with Grid */}
                 <div className="overflow-x-scroll scrollbar-hide -mx-4 px-4 scroll-smooth">
-                    <div className="inline-grid grid-rows-4 grid-flow-col gap-1.5 auto-cols-[60%]">
+                    <div className="inline-grid grid-rows-4 grid-flow-col gap-2 auto-cols-[92%]">
                         {mobileSongs.map((song) => (
                             <div
                                 key={song.id}
