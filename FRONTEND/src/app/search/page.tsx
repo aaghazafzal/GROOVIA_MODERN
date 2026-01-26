@@ -167,7 +167,7 @@ export default function SearchPage() {
         <div className="min-h-screen pb-32 md:pb-24 bg-sidebar">
             {/* Search Header */}
             <div className="pt-6 pb-4 md:px-6 bg-sidebar sticky top-0 z-30">
-                <div className="max-w-7xl mx-auto px-4">
+                <div className="max-w-7xl mx-auto px-3">
                     {/* Search Input */}
                     <div className="relative mb-4">
                         <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={24} />
@@ -381,12 +381,12 @@ export default function SearchPage() {
                                     )}
                                 </div>
 
-                                <div className={selectedFilter === 'all' ? 'overflow-x-auto scrollbar-hide scroll-smooth -mx-4 px-4' : 'grid grid-cols-2 md:grid-cols-6 gap-2 px-1'} ref={selectedFilter === 'all' ? artistsScrollRef : undefined}>
+                                <div className={selectedFilter === 'all' ? 'overflow-x-auto scrollbar-hide scroll-smooth -mx-4 px-4' : 'grid grid-cols-2 md:grid-cols-6 gap-2 px-0.5'} ref={selectedFilter === 'all' ? artistsScrollRef : undefined}>
                                     <div className={selectedFilter === 'all' ? 'flex gap-4' : 'contents'}>
                                         {results.artists.map((artist) => (
                                             <Link key={artist.id} href={`/artist/${artist.id}`} className={selectedFilter === 'all' ? 'flex-shrink-0' : ''}>
-                                                <div className="flex flex-col items-center w-[140px] md:w-[160px] group cursor-pointer">
-                                                    <div className="relative w-[140px] h-[140px] md:w-[160px] md:h-[160px] rounded-full overflow-hidden mb-3 bg-zinc-900">
+                                                <div className="flex flex-col items-center w-[160px] md:w-[160px] group cursor-pointer">
+                                                    <div className="relative w-[160px] h-[160px] md:w-[160px] md:h-[160px] rounded-full overflow-hidden mb-3 bg-zinc-900">
                                                         <Image src={getValidImageUrl(artist)} alt={artist.name || 'Artist'} fill className="object-cover" sizes="160px" />
                                                         <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
                                                             <div className="bg-primary text-white p-2.5 rounded-full shadow-2xl">
