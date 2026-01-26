@@ -137,7 +137,7 @@ const NewSongs = () => {
             </div>
 
             {/* Desktop View - 6 Card Grid with Arrows */}
-            <div className="hidden md:block px-4 py-4">
+            <div className="hidden md:block py-4 pl-4 -mr-4 pr-4">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-3xl font-bold text-white">New Songs</h2>
 
