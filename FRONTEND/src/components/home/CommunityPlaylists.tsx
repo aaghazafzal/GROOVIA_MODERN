@@ -116,12 +116,12 @@ const CommunityPlaylists = () => {
             {/* Playlists Grid */}
             <div
                 ref={scrollRef}
-                className="flex gap-3 md:gap-4 overflow-x-scroll scrollbar-hide scroll-smooth snap-x snap-mandatory px-3 md:px-4"
+                className="flex gap-3 md:gap-4 overflow-x-scroll scrollbar-hide scroll-smooth snap-x snap-mandatory -mx-4 px-4 md:px-4"
             >
                 {playlistsData.map((playlist) => (
                     <div
                         key={playlist.id}
-                        className="flex-shrink-0 w-[85%] md:w-[32%] snap-center rounded-2xl p-4 md:p-5 group cursor-pointer"
+                        className="flex-shrink-0 w-[92%] md:w-[32%] snap-center rounded-2xl p-4 md:p-5 group cursor-pointer"
                         style={{
                             background: `linear-gradient(135deg, ${playlist.from} 0%, ${playlist.to} 100%)`
                         }}
