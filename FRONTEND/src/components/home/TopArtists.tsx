@@ -48,7 +48,7 @@ const TopArtists = () => {
             {/* Artists Grid */}
             <div
                 ref={scrollRef}
-                className="flex gap-3 md:gap-4 overflow-x-scroll scrollbar-hide scroll-smooth px-3 md:px-4"
+                className="flex gap-3 md:gap-4 overflow-x-scroll scrollbar-hide scroll-smooth -mx-4 px-4 md:px-4"
             >
                 {topArtists.map((artist) => (
                     <Link
@@ -56,9 +56,9 @@ const TopArtists = () => {
                         href={`/artist/${artist.id}`}
                         className="flex-shrink-0 group cursor-pointer"
                     >
-                        <div className="flex flex-col items-center w-[120px] md:w-[160px]">
+                        <div className="flex flex-col items-center w-[140px] md:w-[160px]">
                             {/* Circular Image */}
-                            <div className="relative w-[120px] h-[120px] md:w-[160px] md:h-[160px] rounded-full overflow-hidden mb-3">
+                            <div className="relative w-[140px] h-[140px] md:w-[160px] md:h-[160px] rounded-full overflow-hidden mb-3">
                                 <Image
                                     src={artist.url}
                                     alt={artist.name}
