@@ -88,7 +88,7 @@ export default function DiscoverPage() {
             {/* Playlists Grid */}
             <div className="py-6 md:px-6 bg-sidebar">
                 {loading ? (
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-3 md:gap-4 px-1">
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-4">
                         {[...Array(14)].map((_, i) => (
                             <div key={i} className="space-y-3">
                                 <div className="aspect-square bg-zinc-900 rounded-lg animate-pulse"></div>
@@ -98,7 +98,7 @@ export default function DiscoverPage() {
                         ))}
                     </div>
                 ) : playlists.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-3 md:gap-4 px-1">
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-4">
                         {playlists.map((playlist) => (
                             <Link
                                 key={playlist.id}
