@@ -1,12 +1,6 @@
 {
-    "buildCommand": "cd FRONTEND && npm run build",
-    "outputDirectory": "FRONTEND/.next",
-    "installCommand": "cd FRONTEND && npm install",
-    "framework": "nextjs",
-    "rewrites": [
-        {
-            "source": "/(.*)",
-            "destination": "/"
-        }
-    ]
+    "buildCommand": "npm run build",
+    "devCommand": "npm run dev",
+    "installCommand": "npm install",
+    "framework": "nextjs"
 }
