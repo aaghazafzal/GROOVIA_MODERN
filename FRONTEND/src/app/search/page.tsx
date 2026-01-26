@@ -56,6 +56,8 @@ export default function SearchPage() {
         topResult: null,
     });
     const [loading, setLoading] = useState(false);
+    const [showHeader, setShowHeader] = useState(true);
+    const [lastScrollY, setLastScrollY] = useState(0);
     const playSong = useMusicStore((state) => state.playSong);
 
     const songsScrollRef = useRef<HTMLDivElement>(null);
@@ -74,6 +76,27 @@ export default function SearchPage() {
 
         return () => clearTimeout(searchTimeout);
     }, [query, selectedFilter]);
+
+    // Auto-hide header on scroll (mobile only)
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+
+            // Show header when scrolling up or at top
+            if (currentScrollY < lastScrollY || currentScrollY < 10) {
+                setShowHeader(true);
+            }
+            // Hide header when scrolling down
+            else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+                setShowHeader(false);
+            }
+
+            setLastScrollY(currentScrollY);
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [lastScrollY]);
 
     const performSearch = async () => {
         try {
@@ -166,7 +189,7 @@ export default function SearchPage() {
     return (
         <div className="min-h-screen pb-32 md:pb-24 bg-sidebar">
             {/* Search Header */}
-            <div className="pt-6 pb-4 md:px-6 bg-sidebar sticky top-0 z-30 -mx-4 px-4 md:mx-0">
+            <div className={`pt-6 pb-4 md:px-6 bg-sidebar sticky top-0 z-30 -mx-4 px-4 md:mx-0 transition-transform duration-300 md:translate-y-0 ${showHeader ? 'translate-y-0' : '-translate-y-full'}`}>
                 <div className="max-w-7xl mx-auto">
                     {/* Search Input */}
                     <div className="relative mb-4 -mx-4 px-4">
