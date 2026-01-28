@@ -14,9 +14,11 @@ import Greeting from '@/components/home/Greeting';
 
 export default function Home() {
   return (
-    <div className="space-y-4 md:space-y-8 pb-24">
-      {/* Greeting Section */}
-      <Greeting />
+    <div className="space-y-4 md:space-y-8 pb-24 pt-4 md:pt-0">
+      {/* Greeting Section - Hidden on Mobile, Visible on Desktop */}
+      <div className="hidden md:block">
+        <Greeting />
+      </div>
 
       {/* First Section: Speed Dial (Mobile) / Hero Banner (Desktop) */}
       <SpeedDial />
