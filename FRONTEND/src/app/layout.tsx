@@ -4,6 +4,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import MobileNav from '@/components/layout/MobileNav';
 import MiniPlayer from '@/components/player/MiniPlayer';
 import AuthProvider from '@/components/auth/AuthProvider';
+import Footer from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
   title: 'Groovia - Modern Music Streaming',
@@ -26,6 +27,8 @@ export default function RootLayout({
         <main className="flex-1 h-full overflow-y-auto md:ml-64 relative pb-20 md:pb-24 scroll-smooth bg-sidebar">
           <div className="relative z-10 p-4 md:p-8 min-h-full max-w-7xl mx-auto">
             {children}
+            {/* Footer - Appears on all pages */}
+            <Footer />
           </div>
         </main>
 
