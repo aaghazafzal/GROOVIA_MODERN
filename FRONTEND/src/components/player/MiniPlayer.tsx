@@ -92,6 +92,19 @@ const MiniPlayer = () => {
         fetchSongUrl();
     }, [currentSong?.id]);
 
+    // Auto-resume playback when new song is selected
+    // This ensures switching songs always starts playback, preventing pause state carryover
+    useEffect(() => {
+        if (currentSong && audioUrl) {
+            // Only resume if we have a valid song and URL
+            // This runs when song ID changes (new song selected)
+            const store = useMusicStore.getState();
+            if (!store.isPlaying) {
+                store.resumeSong();
+            }
+        }
+    }, [currentSong?.id, audioUrl]);
+
     // Handle seek requests from other components
     useEffect(() => {
         if (seekTime !== null && audioRef.current) {
