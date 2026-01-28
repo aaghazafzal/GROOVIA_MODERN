@@ -148,11 +148,9 @@ const MiniPlayer = () => {
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     };
 
-    if (!currentSong) return null;
-
     // Helper to get image URL safely
     const getImageUrl = () => {
-        return currentSong.image?.[1]?.url || currentSong.image?.[0]?.url || null;
+        return currentSong?.image?.[1]?.url || currentSong?.image?.[0]?.url || null;
     };
     const imageUrl = getImageUrl();
 
@@ -161,8 +159,8 @@ const MiniPlayer = () => {
 
     return (
         <>
-            {/* Mobile Mini Player - Hide on player page */}
-            {!isPlayerPage && (
+            {/* Mobile Mini Player - Hide on player page OR when no song */}
+            {!isPlayerPage && currentSong && (
                 <div className="md:hidden fixed bottom-[4.5rem] left-0 right-0 bg-zinc-900 rounded-t-[2rem] border-t border-white/5 shadow-[0_-8px_20px_rgba(0,0,0,0.6)] z-40 overflow-hidden">
                     <div
                         onClick={() => router.push('/player')}
@@ -238,160 +236,162 @@ const MiniPlayer = () => {
                 </div>
             )}
 
-            {/* Desktop Mini Player */}
-            <div className="hidden md:block fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-zinc-800 z-[100]">
-                {/* Progress Bar */}
-                <div className="w-full h-1 bg-zinc-800 cursor-pointer group">
-                    <div
-                        className="h-full bg-primary relative"
-                        style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-                    >
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                </div>
-
-                <div className="flex items-center justify-between px-4 py-3">
-                    {/* Left: Song Info */}
-                    <div className="flex items-center gap-3 w-[30%] min-w-0">
+            {/* Desktop Mini Player - Hide when no song */}
+            {currentSong && (
+                <div className="hidden md:block fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-zinc-800 z-[100]">
+                    {/* Progress Bar */}
+                    <div className="w-full h-1 bg-zinc-800 cursor-pointer group">
                         <div
-                            onClick={() => router.push('/player')}
-                            className="relative w-14 h-14 rounded overflow-hidden flex-shrink-0 cursor-pointer bg-zinc-800"
+                            className="h-full bg-primary relative"
+                            style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
                         >
-                            {imageUrl ? (
-                                <Image
-                                    src={imageUrl}
-                                    alt={currentSong.name}
-                                    fill
-                                    className="object-cover"
-                                    sizes="56px"
-                                />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                    <BiPlay size={24} className="text-gray-600" />
-                                </div>
-                            )}
+                            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <h3
+                    </div>
+
+                    <div className="flex items-center justify-between px-4 py-3">
+                        {/* Left: Song Info */}
+                        <div className="flex items-center gap-3 w-[30%] min-w-0">
+                            <div
                                 onClick={() => router.push('/player')}
-                                className="text-white font-medium text-sm line-clamp-1 cursor-pointer hover:underline"
+                                className="relative w-14 h-14 rounded overflow-hidden flex-shrink-0 cursor-pointer bg-zinc-800"
                             >
-                                {he.decode(currentSong.name)}
-                            </h3>
-                            <p className="text-gray-400 text-xs line-clamp-1">
-                                {currentSong.artists?.primary?.map((a: any) => a.name).join(', ')}
-                            </p>
-                        </div>
-                        <button
-                            className="p-2 hover:bg-zinc-800 rounded"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (!userData) {
-                                    router.push('/login');
-                                    return;
-                                }
-                                toggleLike(currentSong);
-                            }}
-                        >
-                            {isLiked ? (
-                                <HiHeart size={20} className="text-purple-500" />
-                            ) : (
-                                <HiOutlineHeart size={20} className="text-gray-400 hover:text-white" />
-                            )}
-                        </button>
-                    </div>
-
-                    {/* Center: Controls */}
-                    <div className="flex flex-col items-center gap-2 w-[40%]">
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleShuffle();
-                                }}
-                                className="p-2 hover:bg-zinc-800 rounded relative cursor-pointer"
-                            >
-                                <BiShuffle size={18} className={isShuffle ? "text-purple-500" : "text-gray-400"} />
-                                {isShuffle && <span className="absolute bottom-1.5 right-2 w-1 h-1 bg-purple-500 rounded-full" />}
-                            </button>
-                            <button onClick={playPrevious} className="p-2 hover:bg-zinc-800 rounded">
-                                <BiSkipPrevious size={24} className="text-white" />
-                            </button>
-                            <button
-                                onClick={togglePlay}
-                                className="p-2 rounded-full bg-white hover:scale-105 transition-transform"
-                                disabled={error || !audioUrl}
-                            >
-                                {isPlaying ? (
-                                    <BiPause size={24} className="text-black" />
+                                {imageUrl ? (
+                                    <Image
+                                        src={imageUrl}
+                                        alt={currentSong.name}
+                                        fill
+                                        className="object-cover"
+                                        sizes="56px"
+                                    />
                                 ) : (
-                                    <BiPlay size={24} className="text-black ml-0.5" />
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <BiPlay size={24} className="text-gray-600" />
+                                    </div>
                                 )}
-                            </button>
-                            <button onClick={() => playNext(false)} className="p-2 hover:bg-zinc-800 rounded">
-                                <BiSkipNext size={24} className="text-white" />
-                            </button>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h3
+                                    onClick={() => router.push('/player')}
+                                    className="text-white font-medium text-sm line-clamp-1 cursor-pointer hover:underline"
+                                >
+                                    {he.decode(currentSong.name)}
+                                </h3>
+                                <p className="text-gray-400 text-xs line-clamp-1">
+                                    {currentSong.artists?.primary?.map((a: any) => a.name).join(', ')}
+                                </p>
+                            </div>
                             <button
+                                className="p-2 hover:bg-zinc-800 rounded"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    toggleRepeat();
+                                    if (!userData) {
+                                        router.push('/login');
+                                        return;
+                                    }
+                                    toggleLike(currentSong);
                                 }}
-                                className="p-2 hover:bg-zinc-800 rounded relative cursor-pointer"
                             >
-                                <BiRepeat size={18} className={repeatMode !== 'off' ? "text-purple-500" : "text-gray-400"} />
-                                {repeatMode === 'one' && (
-                                    <span className="absolute top-1.5 right-1.5 text-[8px] font-bold text-purple-500 bg-zinc-900 rounded-full px-0.5 leading-none">1</span>
+                                {isLiked ? (
+                                    <HiHeart size={20} className="text-purple-500" />
+                                ) : (
+                                    <HiOutlineHeart size={20} className="text-gray-400 hover:text-white" />
                                 )}
-                                {repeatMode === 'all' && <span className="absolute bottom-1.5 right-2 w-1 h-1 bg-purple-500 rounded-full" />}
                             </button>
                         </div>
 
-                        <div className="flex items-center gap-2 text-xs text-gray-400 w-full">
-                            <span>{formatTime(currentTime)}</span>
-                            <input
-                                type="range"
-                                min="0"
-                                max={duration || 100}
-                                value={currentTime}
-                                onChange={(e) => {
-                                    if (audioRef.current) {
-                                        audioRef.current.currentTime = Number(e.target.value);
-                                    }
-                                }}
-                                className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                                style={{
-                                    background: `linear-gradient(to right, #7c3aed ${duration > 0 ? (currentTime / duration) * 100 : 0}%, #374151 ${duration > 0 ? (currentTime / duration) * 100 : 0}%)`
-                                }}
-                            />
-                            <span>{formatTime(duration)}</span>
-                        </div>
-                    </div>
+                        {/* Center: Controls */}
+                        <div className="flex flex-col items-center gap-2 w-[40%]">
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleShuffle();
+                                    }}
+                                    className="p-2 hover:bg-zinc-800 rounded relative cursor-pointer"
+                                >
+                                    <BiShuffle size={18} className={isShuffle ? "text-purple-500" : "text-gray-400"} />
+                                    {isShuffle && <span className="absolute bottom-1.5 right-2 w-1 h-1 bg-purple-500 rounded-full" />}
+                                </button>
+                                <button onClick={playPrevious} className="p-2 hover:bg-zinc-800 rounded">
+                                    <BiSkipPrevious size={24} className="text-white" />
+                                </button>
+                                <button
+                                    onClick={togglePlay}
+                                    className="p-2 rounded-full bg-white hover:scale-105 transition-transform"
+                                    disabled={error || !audioUrl}
+                                >
+                                    {isPlaying ? (
+                                        <BiPause size={24} className="text-black" />
+                                    ) : (
+                                        <BiPlay size={24} className="text-black ml-0.5" />
+                                    )}
+                                </button>
+                                <button onClick={() => playNext(false)} className="p-2 hover:bg-zinc-800 rounded">
+                                    <BiSkipNext size={24} className="text-white" />
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleRepeat();
+                                    }}
+                                    className="p-2 hover:bg-zinc-800 rounded relative cursor-pointer"
+                                >
+                                    <BiRepeat size={18} className={repeatMode !== 'off' ? "text-purple-500" : "text-gray-400"} />
+                                    {repeatMode === 'one' && (
+                                        <span className="absolute top-1.5 right-1.5 text-[8px] font-bold text-purple-500 bg-zinc-900 rounded-full px-0.5 leading-none">1</span>
+                                    )}
+                                    {repeatMode === 'all' && <span className="absolute bottom-1.5 right-2 w-1 h-1 bg-purple-500 rounded-full" />}
+                                </button>
+                            </div>
 
-                    {/* Right: Volume & Expand */}
-                    <div className="flex items-center gap-3 w-[30%] justify-end">
-                        <div className="flex items-center gap-2">
-                            <BiVolumeFull size={20} className="text-gray-400" />
-                            <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                value={volume}
-                                onChange={(e) => setVolume(Number(e.target.value))}
-                                className="w-24 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                                style={{
-                                    background: `linear-gradient(to right, #7c3aed ${volume}%, #374151 ${volume}%)`
-                                }}
-                            />
+                            <div className="flex items-center gap-2 text-xs text-gray-400 w-full">
+                                <span>{formatTime(currentTime)}</span>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max={duration || 100}
+                                    value={currentTime}
+                                    onChange={(e) => {
+                                        if (audioRef.current) {
+                                            audioRef.current.currentTime = Number(e.target.value);
+                                        }
+                                    }}
+                                    className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                                    style={{
+                                        background: `linear-gradient(to right, #7c3aed ${duration > 0 ? (currentTime / duration) * 100 : 0}%, #374151 ${duration > 0 ? (currentTime / duration) * 100 : 0}%)`
+                                    }}
+                                />
+                                <span>{formatTime(duration)}</span>
+                            </div>
                         </div>
-                        <button
-                            onClick={() => router.push('/player')}
-                            className="p-2 hover:bg-zinc-800 rounded"
-                        >
-                            <BiChevronUp size={20} className="text-gray-400 hover:text-white" />
-                        </button>
+
+                        {/* Right: Volume & Expand */}
+                        <div className="flex items-center gap-3 w-[30%] justify-end">
+                            <div className="flex items-center gap-2">
+                                <BiVolumeFull size={20} className="text-gray-400" />
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={volume}
+                                    onChange={(e) => setVolume(Number(e.target.value))}
+                                    className="w-24 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                                    style={{
+                                        background: `linear-gradient(to right, #7c3aed ${volume}%, #374151 ${volume}%)`
+                                    }}
+                                />
+                            </div>
+                            <button
+                                onClick={() => router.push('/player')}
+                                className="p-2 hover:bg-zinc-800 rounded"
+                            >
+                                <BiChevronUp size={20} className="text-gray-400 hover:text-white" />
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Hidden Audio Element */}
             {audioUrl && (
