@@ -6,8 +6,9 @@ import { useMusicStore } from '@/store/useMusicStore';
 import Image from 'next/image';
 import Link from 'next/link';
 import he from 'he';
-import { BiPlay, BiDotsVerticalRounded, BiSearch } from 'react-icons/bi';
+import { BiPlay, BiDotsVerticalRounded, BiSearch, BiX } from 'react-icons/bi';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
+import { MdHistory } from 'react-icons/md';
 
 interface SearchResults {
     songs: any[];
@@ -58,12 +59,47 @@ export default function SearchPage() {
     const [loading, setLoading] = useState(false);
     const [showHeader, setShowHeader] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
+    const [searchHistory, setSearchHistory] = useState<string[]>([]);
     const playSong = useMusicStore((state) => state.playSong);
 
     const songsScrollRef = useRef<HTMLDivElement>(null);
     const albumsScrollRef = useRef<HTMLDivElement>(null);
     const artistsScrollRef = useRef<HTMLDivElement>(null);
     const playlistsScrollRef = useRef<HTMLDivElement>(null);
+
+    // Load search history from localStorage on mount
+    useEffect(() => {
+        const savedHistory = localStorage.getItem('groovia-search-history');
+        if (savedHistory) {
+            try {
+                const parsed = JSON.parse(savedHistory);
+                setSearchHistory(Array.isArray(parsed) ? parsed : []);
+            } catch (e) {
+                console.error('Failed to parse search history:', e);
+            }
+        }
+    }, []);
+
+    // Save search to history
+    const saveToHistory = (searchQuery: string) => {
+        if (!searchQuery.trim()) return;
+
+        setSearchHistory((prev) => {
+            // Remove duplicate if exists
+            const filtered = prev.filter(item => item.toLowerCase() !== searchQuery.toLowerCase());
+            // Add to beginning and keep only last 10
+            const updated = [searchQuery, ...filtered].slice(0, 10);
+            // Save to localStorage
+            localStorage.setItem('groovia-search-history', JSON.stringify(updated));
+            return updated;
+        });
+    };
+
+    // Clear all search history
+    const clearHistory = () => {
+        setSearchHistory([]);
+        localStorage.removeItem('groovia-search-history');
+    };
 
     useEffect(() => {
         const searchTimeout = setTimeout(() => {
@@ -166,6 +202,13 @@ export default function SearchPage() {
             }
 
             setResults(allResults);
+
+            // Save to history if we have any results
+            const hasAnyResults = allResults.songs.length > 0 || allResults.albums.length > 0 ||
+                allResults.artists.length > 0 || allResults.playlists.length > 0;
+            if (hasAnyResults) {
+                saveToHistory(query.trim());
+            }
         } catch (error) {
             console.error('Search error:', error);
         } finally {
@@ -227,10 +270,44 @@ export default function SearchPage() {
             {/* Search Results */}
             <div className="md:px-6 pb-6 max-w-7xl mx-auto">
                 {!query && (
-                    <div className="text-center py-20">
-                        <BiSearch size={64} className="mx-auto text-gray-600 mb-4" />
-                        <h2 className="text-2xl font-bold text-white mb-2">Search Groovia</h2>
-                        <p className="text-gray-400">Find your favorite songs, albums, artists, and playlists</p>
+                    <div className="space-y-6">
+                        {/* Search History */}
+                        {searchHistory.length > 0 ? (
+                            <div className="px-4">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                        <MdHistory className="text-purple-500" />
+                                        Recent Searches
+                                    </h2>
+                                    <button
+                                        onClick={clearHistory}
+                                        className="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-1"
+                                    >
+                                        <BiX size={20} />
+                                        Clear All
+                                    </button>
+                                </div>
+                                <div className="space-y-2">
+                                    {searchHistory.map((historyItem, index) => (
+                                        <div
+                                            key={index}
+                                            onClick={() => setQuery(historyItem)}
+                                            className="flex items-center gap-3 p-3 rounded-lg bg-zinc-900/50 hover:bg-zinc-800 transition-colors cursor-pointer group"
+                                        >
+                                            <BiSearch className="text-gray-400 group-hover:text-purple-400 transition-colors" size={20} />
+                                            <span className="flex-1 text-white text-sm">{historyItem}</span>
+                                            <IoChevronForward className="text-gray-600 group-hover:text-gray-400 transition-colors" size={16} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-20">
+                                <BiSearch size={64} className="mx-auto text-gray-600 mb-4" />
+                                <h2 className="text-2xl font-bold text-white mb-2">Search Groovia</h2>
+                                <p className="text-gray-400">Find your favorite songs, albums, artists, and playlists</p>
+                            </div>
+                        )}
                     </div>
                 )}
 
