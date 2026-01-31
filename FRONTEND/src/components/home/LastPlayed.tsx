@@ -123,7 +123,7 @@ const LastPlayed = () => {
                     ref={scrollRef}
                     className="overflow-x-auto scrollbar-hide scroll-smooth"
                 >
-                    <div className="inline-grid grid-rows-4 grid-flow-col gap-2 auto-cols-[40%]">
+                    <div className="inline-grid grid-rows-4 grid-flow-col gap-2 auto-cols-[80%]">
                         {desktopSongs.map((song) => (
                             <div
                                 key={song.id}
