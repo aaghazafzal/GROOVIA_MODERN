@@ -2,6 +2,7 @@
 
 import { useAuthStore } from '@/store/useAuthStore';
 import SongImage from '@/components/ui/SongImage';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { BiUser, BiLogOut, BiPlus, BiHeart, BiMusic, BiPencil, BiTrash, BiX, BiCheck, BiCog } from 'react-icons/bi';
 import { useState, useEffect } from 'react';
