@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/api';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import he from 'he';
 import {
     BiPlay,
@@ -24,12 +24,17 @@ import {
     BiListPlus,
 } from 'react-icons/bi';
 import { HiOutlineHeart, HiHeart } from 'react-icons/hi';
-import { IoShareOutline, IoChevronBack, IoChevronForward } from 'react-icons/io5';
+import { IoShareOutline, IoChevronBack, IoChevronForward, IoLogoWhatsapp, IoLogoFacebook, IoLogoTwitter, IoCopyOutline, IoClose } from 'react-icons/io5';
 import SongImage from '@/components/ui/SongImage';
 import { getImageUrl } from '@/lib/imageUtils';
 
 export default function PlayerPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const queryId = searchParams.get('id');
+    const [isInitializing, setIsInitializing] = useState(!!queryId);
+    const [showShareModal, setShowShareModal] = useState(false);
+
     const [activeTab, setActiveTab] = useState<'related' | 'upnext' | 'details'>('related');
     // Removed local time/duration state to use global store
     const [selectedFilter, setSelectedFilter] = useState('All');
@@ -112,6 +117,33 @@ export default function PlayerPage() {
     const [toastMessage, setToastMessage] = useState('');
 
     const toggleMenu = () => setShowMenu(!showMenu);
+
+    const handleShare = async () => {
+        if (!currentSong) return;
+        const shareUrl = `${window.location.origin}/player?id=${currentSong.id}`;
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: currentSong.name,
+                    text: `Listen to ${currentSong.name} on Groovia!`,
+                    url: shareUrl
+                });
+                return;
+            } catch (err) {
+                if ((err as any).name !== 'AbortError') setShowShareModal(true);
+            }
+        } else {
+            setShowShareModal(true);
+        }
+    };
+
+    const copyLink = () => {
+        const shareUrl = `${window.location.origin}/player?id=${currentSong?.id}`;
+        navigator.clipboard.writeText(shareUrl);
+        showToast('Link copied to clipboard');
+        setShowShareModal(false);
+    };
 
     const openPlaylistSelector = async () => {
         setShowMenu(false);
@@ -289,12 +321,27 @@ export default function PlayerPage() {
         }
     };
 
+    // Deep Linking Effect
+    useEffect(() => {
+        if (queryId && (!currentSong || currentSong.id !== queryId)) {
+            setIsInitializing(true);
+            api.get(`/songs/${queryId}`)
+                .then(res => {
+                    if (res.data?.data?.[0]) playSong(res.data.data[0]);
+                })
+                .catch(e => console.error(e))
+                .finally(() => setIsInitializing(false));
+        } else if (queryId && currentSong?.id === queryId) {
+            setIsInitializing(false);
+        }
+    }, [queryId]);
+
     // Redirect if no song is playing
     useEffect(() => {
-        if (!currentSong) {
+        if (!currentSong && !queryId && !isInitializing) {
             router.replace('/');
         }
-    }, [currentSong, router]);
+    }, [currentSong, router, queryId, isInitializing]);
 
     if (!currentSong) {
         return (
@@ -359,6 +406,83 @@ export default function PlayerPage() {
                         >
                             Cancel
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Share Modal */}
+            {showShareModal && (
+                <div
+                    className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animation-fade-in"
+                    onClick={() => setShowShareModal(false)}
+                >
+                    <div
+                        className="bg-[#1e1e1e] w-full max-w-sm rounded-[2rem] border border-white/10 shadow-2xl p-6 relative transform transition-all scale-100"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <button onClick={() => setShowShareModal(false)} className="absolute top-4 right-4 p-2 bg-white/5 rounded-full hover:bg-white/20">
+                            <IoClose size={20} className="text-white" />
+                        </button>
+
+                        <h3 className="text-xl font-bold text-white mb-6 text-center">Share Song</h3>
+
+                        <div className="grid grid-cols-4 gap-4 mb-6">
+                            {/* WhatsApp */}
+                            <a
+                                href={`https://wa.me/?text=${encodeURIComponent(`Listen to ${currentSong.name} on Groovia! ${window.location.origin}/player?id=${currentSong.id}`)}`}
+                                target="_blank" rel="noopener noreferrer"
+                                className="flex flex-col items-center gap-2 group"
+                            >
+                                <div className="w-14 h-14 rounded-full bg-[#25D366] flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                                    <IoLogoWhatsapp size={28} className="text-white" />
+                                </div>
+                                <span className="text-xs text-gray-400">WhatsApp</span>
+                            </a>
+
+                            {/* Facebook */}
+                            <a
+                                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`${window.location.origin}/player?id=${currentSong.id}`)}`}
+                                target="_blank" rel="noopener noreferrer"
+                                className="flex flex-col items-center gap-2 group"
+                            >
+                                <div className="w-14 h-14 rounded-full bg-[#1877F2] flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                                    <IoLogoFacebook size={28} className="text-white" />
+                                </div>
+                                <span className="text-xs text-gray-400">Facebook</span>
+                            </a>
+
+                            {/* Twitter */}
+                            <a
+                                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Listen to ${currentSong.name} on Groovia!`)}&url=${encodeURIComponent(`${window.location.origin}/player?id=${currentSong.id}`)}`}
+                                target="_blank" rel="noopener noreferrer"
+                                className="flex flex-col items-center gap-2 group"
+                            >
+                                <div className="w-14 h-14 rounded-full bg-[#1DA1F2] flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                                    <IoLogoTwitter size={28} className="text-white" />
+                                </div>
+                                <span className="text-xs text-gray-400">Twitter</span>
+                            </a>
+
+                            {/* Copy Link */}
+                            <button
+                                onClick={copyLink}
+                                className="flex flex-col items-center gap-2 group"
+                            >
+                                <div className="w-14 h-14 rounded-full bg-zinc-700 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                                    <IoCopyOutline size={28} className="text-white" />
+                                </div>
+                                <span className="text-xs text-gray-400">Copy Link</span>
+                            </button>
+                        </div>
+
+                        <div className="p-3 bg-black/40 rounded-xl flex items-center justify-between border border-white/5">
+                            <p className="text-xs text-gray-400 truncate flex-1 mr-4">
+                                {`${window.location.origin}/player?id=${currentSong.id}`}
+                            </p>
+                            <button onClick={copyLink} className="text-purple-400 text-xs font-bold hover:text-purple-300">
+                                COPY
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -531,7 +655,7 @@ export default function PlayerPage() {
                             {isLiked ? 'Liked' : 'Save'}
                         </span>
                     </button>
-                    <button className="flex flex-col items-center gap-1">
+                    <button onClick={handleShare} className="flex flex-col items-center gap-1 active:scale-95 transition-transform">
                         <div className="p-3 rounded-lg bg-zinc-900 hover:bg-zinc-800">
                             <IoShareOutline size={20} className="text-white" />
                         </div>
@@ -831,7 +955,7 @@ export default function PlayerPage() {
                                     <HiOutlineHeart size={24} className="text-white" />
                                 )}
                             </button>
-                            <button className="p-3 rounded-lg hover:bg-zinc-800">
+                            <button onClick={handleShare} className="p-3 rounded-lg hover:bg-zinc-800" title="Share">
                                 <IoShareOutline size={24} className="text-white" />
                             </button>
                             <button
