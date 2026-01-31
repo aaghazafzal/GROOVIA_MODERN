@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { fetchPlaylistById } from '@/lib/api';
 import { useMusicStore } from '@/store/useMusicStore';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import { BiPlay } from 'react-icons/bi';
 import he from 'he';
 
@@ -75,14 +75,14 @@ const HeroBanner = () => {
         <div className="hidden md:block relative h-[60vh] min-h-[500px] rounded-[2rem] overflow-hidden group">
             {/* Background Image with Smooth Transition */}
             <div className="absolute inset-0 transition-opacity duration-1000 ease-in-out">
-                <Image
+                <SongImage
                     src={currentSong.image[currentSong.image.length - 1]?.url}
                     alt={he.decode(currentSong.name)}
                     fill
                     className="object-cover"
                     priority
                     sizes="100vw"
-                    quality={100}
+                    fallbackSize={100}
                 />
             </div>
 

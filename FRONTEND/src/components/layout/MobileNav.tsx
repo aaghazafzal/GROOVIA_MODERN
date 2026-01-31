@@ -6,7 +6,7 @@ import { BiHomeAlt, BiSearch, BiLibrary, BiCompass, BiUser } from 'react-icons/b
 // import { HiOutlineHeart } from 'react-icons/hi';
 import clsx from 'clsx';
 import { useAuthStore } from '@/store/useAuthStore';
-import Image from 'next/image';
+
 
 const MobileNav = () => {
     const pathname = usePathname();

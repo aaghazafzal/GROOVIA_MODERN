@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuthStore } from '@/store/useAuthStore';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import { useRouter } from 'next/navigation';
 import { BiUser, BiLogOut, BiPlus, BiHeart, BiMusic, BiPencil, BiTrash, BiX, BiCheck, BiCog } from 'react-icons/bi';
 import { useState, useEffect } from 'react';
@@ -286,11 +286,13 @@ export default function LibraryPage() {
                                             className={`group relative p-4 bg-[#181818] rounded-lg transition-all cursor-pointer ${isEditMode ? 'hover:bg-[#222]' : 'hover:bg-[#282828]'}`}
                                         >
                                             <div className="relative aspect-square w-full mb-4 bg-zinc-800 rounded-md shadow-lg overflow-hidden flex items-center justify-center">
-                                                {coverImage ? (
-                                                    <Image src={coverImage} alt={playlist.name} fill className="object-cover" />
-                                                ) : (
-                                                    <BiMusic size={40} className="text-gray-500" />
-                                                )}
+                                                <SongImage
+                                                    src={coverImage}
+                                                    alt={playlist.name}
+                                                    fill
+                                                    className="object-cover"
+                                                    fallbackSize={40}
+                                                />
 
                                                 {/* Edit Mode Overlay */}
                                                 {isEditMode && (

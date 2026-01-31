@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { topArtists } from '@/data/topArtists';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import Link from 'next/link';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
 import { BiPlay } from 'react-icons/bi';
@@ -59,12 +59,13 @@ const TopArtists = () => {
                         <div className="flex flex-col items-center w-[140px] md:w-[160px]">
                             {/* Circular Image */}
                             <div className="relative w-[140px] h-[140px] md:w-[160px] md:h-[160px] rounded-full overflow-hidden mb-3">
-                                <Image
+                                <SongImage
                                     src={artist.url}
                                     alt={artist.name}
                                     fill
                                     className="object-cover"
                                     sizes="(max-width: 768px) 120px, 160px"
+                                    fallbackSize={60}
                                 />
 
                                 {/* Play Button - Bottom Right (Spotify Style) */}

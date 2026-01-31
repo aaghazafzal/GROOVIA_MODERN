@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useMusicStore } from '@/store/useMusicStore';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import Link from 'next/link';
 import he from 'he';
 import {
@@ -166,13 +166,14 @@ export default function ArtistPage() {
 
                 {/* Hero Section */}
                 <div className="relative w-full aspect-[4/3]">
-                    <Image
+                    <SongImage
                         src={artist.image?.[2]?.url || artist.image?.[0]?.url}
                         alt={artist.name}
                         fill
                         className="object-cover"
                         priority
                         sizes="100vw"
+                        fallbackSize={100}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
 
@@ -204,11 +205,12 @@ export default function ArtistPage() {
                     {artist.singles && artist.singles.length > 0 && (
                         <div className="bg-zinc-900/50 rounded-lg p-3 flex items-center gap-4 mb-8 border border-zinc-800" onClick={() => router.push(`/album/${artist.singles![0].id}`)}>
                             <div className="relative w-12 h-12 rounded overflow-hidden flex-shrink-0">
-                                <Image
+                                <SongImage
                                     src={artist.singles![0].image?.[1]?.url || artist.singles![0].image?.[0]?.url}
                                     alt={artist.singles![0].name}
                                     fill
                                     className="object-cover"
+                                    fallbackSize={24}
                                 />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -232,11 +234,12 @@ export default function ArtistPage() {
                                     className="flex items-center gap-4 py-3 active:bg-zinc-900/50 rounded-lg -mx-2 px-2 transition-colors"
                                 >
                                     <div className="relative w-14 h-14 rounded-md overflow-hidden flex-shrink-0 bg-zinc-800 shadow-md">
-                                        <Image
+                                        <SongImage
                                             src={song.image?.[1]?.url || song.image?.[0]?.url}
                                             alt={song.name}
                                             fill
                                             className="object-cover"
+                                            fallbackSize={28}
                                         />
                                     </div>
                                     <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -271,11 +274,12 @@ export default function ArtistPage() {
                                 {artist.topAlbums.map((album) => (
                                     <Link key={album.id} href={`/album/${album.id}`} className="flex-shrink-0 w-[140px] snap-start">
                                         <div className="relative aspect-square rounded-lg overflow-hidden mb-2 bg-zinc-900 shadow-md">
-                                            <Image
+                                            <SongImage
                                                 src={album.image?.[2]?.url || album.image?.[0]?.url}
                                                 alt={album.name}
                                                 fill
                                                 className="object-cover"
+                                                fallbackSize={60}
                                             />
                                         </div>
                                         <h3 className="text-white font-medium text-sm line-clamp-1 mb-0.5">{safeDecode(album.name)}</h3>
@@ -294,11 +298,12 @@ export default function ArtistPage() {
                                 {artist.singles.map((single) => (
                                     <Link key={single.id} href={`/album/${single.id}`} className="flex-shrink-0 w-[140px] snap-start">
                                         <div className="relative aspect-square rounded-lg overflow-hidden mb-2 bg-zinc-900 shadow-md">
-                                            <Image
+                                            <SongImage
                                                 src={single.image?.[2]?.url || single.image?.[0]?.url}
                                                 alt={single.name}
                                                 fill
                                                 className="object-cover"
+                                                fallbackSize={60}
                                             />
                                         </div>
                                         <h3 className="text-white font-medium text-sm line-clamp-1 mb-0.5">{safeDecode(single.name)}</h3>
@@ -317,11 +322,12 @@ export default function ArtistPage() {
                                 {artist.featuredPlaylists.map((playlist) => (
                                     <Link key={playlist.id} href={`/playlist/${playlist.id}`} className="flex-shrink-0 w-[140px] snap-start">
                                         <div className="relative aspect-square rounded-lg overflow-hidden mb-2 bg-zinc-900 shadow-md">
-                                            <Image
+                                            <SongImage
                                                 src={playlist.image?.[2]?.url || playlist.image?.[0]?.url}
                                                 alt={playlist.name}
                                                 fill
                                                 className="object-cover"
+                                                fallbackSize={60}
                                             />
                                         </div>
                                         <h3 className="text-white font-medium text-sm line-clamp-1 mb-0.5">{safeDecode(playlist.name)}</h3>
@@ -340,11 +346,12 @@ export default function ArtistPage() {
                                 {artist.similarArtists.map((simArtist) => (
                                     <Link key={simArtist.id} href={`/artist/${simArtist.id}`} className="flex-shrink-0 w-[120px] snap-start text-center">
                                         <div className="relative aspect-square rounded-full overflow-hidden mb-2 bg-zinc-900 shadow-md">
-                                            <Image
+                                            <SongImage
                                                 src={simArtist.image?.[2]?.url || simArtist.image?.[0]?.url}
                                                 alt={simArtist.name}
                                                 fill
                                                 className="object-cover"
+                                                fallbackSize={60}
                                             />
                                         </div>
                                         <h3 className="text-white font-medium text-sm line-clamp-2">{safeDecode(simArtist.name)}</h3>
@@ -386,13 +393,14 @@ export default function ArtistPage() {
                 {/* Hero Section */}
                 <div className="relative h-[65vh] w-full">
                     <div className="absolute inset-0">
-                        <Image
+                        <SongImage
                             src={artist.image?.[2]?.url || artist.image?.[0]?.url}
                             alt={artist.name}
                             fill
                             className="object-cover object-top"
                             priority
                             sizes="100vw"
+                            fallbackSize={120}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
                         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/90"></div>
@@ -449,11 +457,12 @@ export default function ArtistPage() {
                                         <BiPlay size={24} className="hidden group-hover:block w-6 text-white" />
 
                                         <div className="relative w-12 h-12 rounded overflow-hidden flex-shrink-0 bg-zinc-800">
-                                            <Image
+                                            <SongImage
                                                 src={song.image?.[1]?.url || song.image?.[0]?.url}
                                                 alt={song.name}
                                                 fill
                                                 className="object-cover"
+                                                fallbackSize={24}
                                             />
                                         </div>
 
@@ -518,11 +527,12 @@ export default function ArtistPage() {
                                 {artist.topAlbums.map((album) => (
                                     <Link key={album.id} href={`/album/${album.id}`} className="min-w-[200px] w-[200px] snap-start group">
                                         <div className="relative aspect-square rounded-lg overflow-hidden mb-4 bg-zinc-900 shadow-lg">
-                                            <Image
+                                            <SongImage
                                                 src={album.image?.[2]?.url || album.image?.[0]?.url}
                                                 alt={album.name}
                                                 fill
                                                 className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                                fallbackSize={80}
                                             />
                                         </div>
                                         <h3 className="text-white font-bold text-base line-clamp-1 mb-1 group-hover:underline decoration-white/50">{safeDecode(album.name)}</h3>
@@ -560,11 +570,12 @@ export default function ArtistPage() {
                                 {artist.singles.map((single) => (
                                     <Link key={single.id} href={`/album/${single.id}`} className="min-w-[200px] w-[200px] snap-start group">
                                         <div className="relative aspect-square rounded-lg overflow-hidden mb-4 bg-zinc-900 shadow-lg">
-                                            <Image
+                                            <SongImage
                                                 src={single.image?.[2]?.url || single.image?.[0]?.url}
                                                 alt={single.name}
                                                 fill
                                                 className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                                fallbackSize={80}
                                             />
                                         </div>
                                         <h3 className="text-white font-bold text-base line-clamp-1 mb-1 group-hover:underline decoration-white/50">{safeDecode(single.name)}</h3>
@@ -602,11 +613,12 @@ export default function ArtistPage() {
                                 {artist.featuredPlaylists.map((playlist) => (
                                     <Link key={playlist.id} href={`/playlist/${playlist.id}`} className="min-w-[200px] w-[200px] snap-start group">
                                         <div className="relative aspect-square rounded-lg overflow-hidden mb-4 bg-zinc-900 shadow-lg">
-                                            <Image
+                                            <SongImage
                                                 src={playlist.image?.[2]?.url || playlist.image?.[0]?.url}
                                                 alt={playlist.name}
                                                 fill
                                                 className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                                fallbackSize={80}
                                             />
                                         </div>
                                         <h3 className="text-white font-bold text-base line-clamp-1 mb-1 group-hover:underline decoration-white/50">{safeDecode(playlist.name)}</h3>
@@ -644,11 +656,12 @@ export default function ArtistPage() {
                                 {artist.similarArtists.map((simArtist) => (
                                     <Link key={simArtist.id} href={`/artist/${simArtist.id}`} className="min-w-[180px] w-[180px] snap-start group text-center">
                                         <div className="relative aspect-square rounded-full overflow-hidden mb-4 bg-zinc-900 shadow-lg mx-auto w-full">
-                                            <Image
+                                            <SongImage
                                                 src={simArtist.image?.[2]?.url || simArtist.image?.[0]?.url}
                                                 alt={simArtist.name}
                                                 fill
                                                 className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                                fallbackSize={80}
                                             />
                                         </div>
                                         <h3 className="text-white font-bold text-base line-clamp-1 mb-1 group-hover:underline decoration-white/50">{safeDecode(simArtist.name)}</h3>

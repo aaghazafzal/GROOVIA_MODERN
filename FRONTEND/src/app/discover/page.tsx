@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import Link from 'next/link';
 import he from 'he';
 
@@ -108,7 +108,7 @@ export default function DiscoverPage() {
                                 <div className="space-y-3">
                                     {/* Square Album Art */}
                                     <div className="relative aspect-square rounded-lg overflow-hidden bg-zinc-900">
-                                        <Image
+                                        <SongImage
                                             src={
                                                 playlist.image?.[2]?.url ||
                                                 playlist.image?.[1]?.url ||
@@ -118,6 +118,7 @@ export default function DiscoverPage() {
                                             fill
                                             className="object-cover transition-transform group-hover:scale-105"
                                             sizes="(max-width: 768px) 50vw, (max-width: 1024px) 25vw, (max-width: 1280px) 16.66vw, 14.28vw"
+                                            fallbackSize={60}
                                         />
                                     </div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuthStore } from '@/store/useAuthStore';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import { BiPlay, BiTime, BiHeart } from 'react-icons/bi';
 import { useMusicStore } from '@/store/useMusicStore';
 import he from 'he';
@@ -62,18 +62,13 @@ export default function LikedSongsPage() {
                             </button>
 
                             <div className="relative w-12 h-12 rounded overflow-hidden flex-shrink-0">
-                                {song.image?.[0]?.url ? (
-                                    <Image
-                                        src={song.image[1]?.url || song.image[0]?.url}
-                                        alt={song.name}
-                                        fill
-                                        className="object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-                                        <BiHeart size={20} className="text-gray-600" />
-                                    </div>
-                                )}
+                                <SongImage
+                                    src={song.image?.[1]?.url || song.image?.[0]?.url}
+                                    alt={song.name}
+                                    fill
+                                    className="object-cover"
+                                    fallbackSize={24}
+                                />
                             </div>
 
                             <div className="flex-1 min-w-0">

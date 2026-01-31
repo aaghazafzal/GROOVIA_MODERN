@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useMusicStore } from '@/store/useMusicStore';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import Link from 'next/link';
 import he from 'he';
 import {
@@ -324,18 +324,15 @@ export default function PlaylistPage() {
                 {/* Playlist Art & Info */}
                 <div className="px-6 py-6">
                     <div className="relative w-full aspect-square rounded-lg overflow-hidden shadow-2xl mb-4 flex items-center justify-center bg-zinc-900">
-                        {(playlist.image?.[2]?.url || playlist.image?.[0]?.url) ? (
-                            <Image
-                                src={playlist.image?.[2]?.url || playlist.image?.[0]?.url}
-                                alt={playlist.name}
-                                fill
-                                className="object-cover"
-                                priority
-                                sizes="100vw"
-                            />
-                        ) : (
-                            <BiMusic size={80} className="text-zinc-700" />
-                        )}
+                        <SongImage
+                            src={playlist.image?.[2]?.url || playlist.image?.[0]?.url}
+                            alt={playlist.name}
+                            fill
+                            className="object-cover"
+                            priority
+                            sizes="100vw"
+                            fallbackSize={80}
+                        />
                     </div>
 
                     <h1 className="text-2xl font-bold text-white mb-2">{he.decode(playlist.name)}</h1>
@@ -443,12 +440,13 @@ export default function PlaylistPage() {
                             )}
 
                             <div className="relative w-12 h-12 rounded overflow-hidden flex-shrink-0 bg-zinc-900">
-                                <Image
+                                <SongImage
                                     src={song.image?.[1]?.url || song.image?.[0]?.url}
                                     alt={song.name}
                                     fill
                                     className="object-cover"
                                     sizes="48px"
+                                    fallbackSize={24}
                                 />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -510,17 +508,14 @@ export default function PlaylistPage() {
                                         className="flex-shrink-0 w-[calc(50%-6px)] snap-start"
                                     >
                                         <div className="relative aspect-square rounded-lg overflow-hidden mb-2 bg-zinc-900 flex items-center justify-center">
-                                            {imageUrl ? (
-                                                <Image
-                                                    src={imageUrl}
-                                                    alt={relPlaylist.name}
-                                                    fill
-                                                    className="object-cover"
-                                                    sizes="50vw"
-                                                />
-                                            ) : (
-                                                <BiMusic size={40} className="text-zinc-700" />
-                                            )}
+                                            <SongImage
+                                                src={imageUrl}
+                                                alt={relPlaylist.name}
+                                                fill
+                                                className="object-cover"
+                                                sizes="50vw"
+                                                fallbackSize={40}
+                                            />
                                         </div>
                                         <h3 className="text-white font-medium text-sm line-clamp-1 mb-1">
                                             {he.decode(relPlaylist.title || relPlaylist.name)}
@@ -550,18 +545,15 @@ export default function PlaylistPage() {
                     <div className="w-[400px] flex-shrink-0 flex flex-col">
                         <div className="sticky top-20 pt-8 pl-6 pr-6">
                             <div className="relative w-full aspect-square rounded-lg overflow-hidden shadow-2xl mb-6 flex items-center justify-center bg-zinc-900">
-                                {(playlist.image?.[2]?.url || playlist.image?.[0]?.url) ? (
-                                    <Image
-                                        src={playlist.image?.[2]?.url || playlist.image?.[0]?.url}
-                                        alt={playlist.name}
-                                        fill
-                                        className="object-cover"
-                                        priority
-                                        sizes="400px"
-                                    />
-                                ) : (
-                                    <BiMusic size={120} className="text-zinc-700" />
-                                )}
+                                <SongImage
+                                    src={playlist.image?.[2]?.url || playlist.image?.[0]?.url}
+                                    alt={playlist.name}
+                                    fill
+                                    className="object-cover"
+                                    priority
+                                    sizes="400px"
+                                    fallbackSize={120}
+                                />
                             </div>
 
                             {/* Playlist Info */}
@@ -680,12 +672,13 @@ export default function PlaylistPage() {
 
                                         {/* Thumbnail - Playlist Only */}
                                         <div className="relative w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-zinc-900">
-                                            <Image
+                                            <SongImage
                                                 src={song.image?.[1]?.url || song.image?.[0]?.url}
                                                 alt={song.name}
                                                 fill
                                                 className="object-cover"
                                                 sizes="40px"
+                                                fallbackSize={20}
                                             />
                                         </div>
 
@@ -760,17 +753,14 @@ export default function PlaylistPage() {
                                                     className="group"
                                                 >
                                                     <div className="relative aspect-square rounded-lg overflow-hidden mb-4 bg-zinc-900 shadow-lg flex items-center justify-center">
-                                                        {imageUrl ? (
-                                                            <Image
-                                                                src={imageUrl}
-                                                                alt={relPlaylist.name}
-                                                                fill
-                                                                className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                                                sizes="(max-width: 1200px) 25vw, 200px"
-                                                            />
-                                                        ) : (
-                                                            <BiMusic size={80} className="text-zinc-700 group-hover:scale-110 transition-transform duration-300" />
-                                                        )}
+                                                        <SongImage
+                                                            src={imageUrl}
+                                                            alt={relPlaylist.name}
+                                                            fill
+                                                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                                            sizes="(max-width: 1200px) 25vw, 200px"
+                                                            fallbackSize={80}
+                                                        />
                                                     </div>
                                                     <h3 className="text-white font-bold text-base line-clamp-1 mb-1 group-hover:underline decoration-white/50">
                                                         {he.decode(relPlaylist.title || relPlaylist.name)}

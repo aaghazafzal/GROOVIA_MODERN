@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { moodPlaylists } from '@/data/moodPlaylists';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import Link from 'next/link';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
 import he from 'he';
@@ -58,13 +58,13 @@ const ForEveryMood = () => {
                     >
                         {/* Large Portrait Card */}
                         <div className="relative aspect-[3/4] rounded-2xl overflow-hidden mb-3">
-                            <Image
+                            <SongImage
                                 src={playlist.image}
                                 alt={he.decode(playlist.name)}
                                 fill
                                 className="object-cover"
                                 sizes="85vw"
-                                quality={100}
+                                fallbackSize={80}
                             />
                             {/* Gradient Overlay */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
@@ -99,13 +99,13 @@ const ForEveryMood = () => {
                     >
                         {/* Large Portrait Card */}
                         <div className="relative aspect-[3/4] rounded-2xl overflow-hidden mb-3">
-                            <Image
+                            <SongImage
                                 src={playlist.image}
                                 alt={he.decode(playlist.name)}
                                 fill
                                 className="object-cover"
                                 sizes="32vw"
-                                quality={100}
+                                fallbackSize={100}
                             />
                             {/* Gradient Overlay */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>

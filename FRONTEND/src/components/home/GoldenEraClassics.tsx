@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { goldenEraPlaylists } from '@/data/goldenEraPlaylists';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import Link from 'next/link';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
 import he from 'he';
@@ -59,12 +59,13 @@ const GoldenEraClassics = () => {
                         <div className="w-[185px] md:w-[200px]">
                             {/* Square Album Art */}
                             <div className="relative w-full aspect-square rounded-lg overflow-hidden mb-3 bg-zinc-900">
-                                <Image
+                                <SongImage
                                     src={playlist.image}
                                     alt={he.decode(playlist.name)}
                                     fill
                                     className="object-cover transition-transform group-hover:scale-105"
                                     sizes="(max-width: 768px) 165px, 200px"
+                                    fallbackSize={60}
                                 />
                             </div>
 

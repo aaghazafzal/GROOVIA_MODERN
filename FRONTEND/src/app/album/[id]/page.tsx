@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useMusicStore } from '@/store/useMusicStore';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import Link from 'next/link';
 import he from 'he';
 import {
@@ -169,13 +169,14 @@ export default function AlbumPage() {
                 {/* Album Art & Info */}
                 <div className="px-6 py-6">
                     <div className="relative w-full aspect-square rounded-lg overflow-hidden shadow-2xl mb-4">
-                        <Image
+                        <SongImage
                             src={album.image?.[2]?.url || album.image?.[0]?.url}
                             alt={album.name}
                             fill
                             className="object-cover"
                             priority
                             sizes="100vw"
+                            fallbackSize={100}
                         />
                     </div>
 
@@ -260,12 +261,13 @@ export default function AlbumPage() {
                                     className="flex-shrink-0 w-[calc(50%-6px)] snap-start"
                                 >
                                     <div className="relative aspect-square rounded-lg overflow-hidden mb-2 bg-zinc-900">
-                                        <Image
+                                        <SongImage
                                             src={relAlbum.image?.[2]?.url || relAlbum.image?.[0]?.url}
                                             alt={relAlbum.name}
                                             fill
                                             className="object-cover"
                                             sizes="50vw"
+                                            fallbackSize={40}
                                         />
                                     </div>
                                     <h3 className="text-white font-medium text-sm line-clamp-1 mb-1">
@@ -295,13 +297,14 @@ export default function AlbumPage() {
                     <div className="w-[400px] flex-shrink-0 flex flex-col">
                         <div className="sticky top-20 pt-8 pl-6 pr-6">
                             <div className="relative w-full aspect-square rounded-lg overflow-hidden shadow-2xl mb-6">
-                                <Image
+                                <SongImage
                                     src={album.image?.[2]?.url || album.image?.[0]?.url}
                                     alt={album.name}
                                     fill
                                     className="object-cover"
                                     priority
                                     sizes="400px"
+                                    fallbackSize={120}
                                 />
                             </div>
 
@@ -404,12 +407,13 @@ export default function AlbumPage() {
                                                 className="group"
                                             >
                                                 <div className="relative aspect-square rounded-lg overflow-hidden mb-4 bg-zinc-900 shadow-lg">
-                                                    <Image
+                                                    <SongImage
                                                         src={relAlbum.image?.[2]?.url || relAlbum.image?.[0]?.url}
                                                         alt={relAlbum.name}
                                                         fill
                                                         className="object-cover group-hover:scale-105 transition-transform duration-300"
                                                         sizes="(max-width: 1200px) 25vw, 200px"
+                                                        fallbackSize={80}
                                                     />
                                                 </div>
                                                 <h3 className="text-white font-bold text-base line-clamp-1 mb-1 group-hover:underline decoration-white/50">

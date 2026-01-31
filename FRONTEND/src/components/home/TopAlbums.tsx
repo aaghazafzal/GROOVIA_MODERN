@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import Link from 'next/link';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
 import he from 'he';
@@ -109,12 +109,14 @@ const TopAlbums = () => {
                         <div className="bg-zinc-900/50 rounded-2xl p-4 md:p-5 hover:bg-zinc-900/70 transition-colors">
                             {/* Album Cover */}
                             <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-4">
-                                <Image
+                                <SongImage
                                     src={album.image?.[2]?.url || album.image?.[1]?.url || album.image?.[0]?.url}
                                     alt={he.decode(album.name)}
                                     fill
                                     className="object-cover group-hover:scale-105 transition-transform"
                                     sizes="(max-width: 768px) 85vw, 32vw"
+                                    fallbackSize={80}
+                                    priority={false}
                                 />
                             </div>
 

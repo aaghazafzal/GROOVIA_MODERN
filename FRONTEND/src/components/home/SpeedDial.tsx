@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { fetchPlaylistById } from '@/lib/api';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import he from 'he';
 
 import { useMusicStore } from '@/store/useMusicStore';
@@ -70,12 +70,13 @@ const SpeedDial = () => {
                         onClick={() => playSong(song as any)}
                         className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group border-2 border-transparent hover:border-white transition-all duration-200"
                     >
-                        <Image
+                        <SongImage
                             src={song.image[2]?.url || song.image[0]?.url}
                             alt={he.decode(song.name)}
                             fill
                             className="object-cover"
                             sizes="(max-width: 768px) 33vw"
+                            fallbackSize={32}
                         />
                         {/* Overlay with title */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2">

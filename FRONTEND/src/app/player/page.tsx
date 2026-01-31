@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useMusicStore } from '@/store/useMusicStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/api';
-import Image from 'next/image';
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import he from 'he';

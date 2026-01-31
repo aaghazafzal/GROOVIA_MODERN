@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useMusicStore } from '@/store/useMusicStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/api';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import he from 'he';
@@ -175,19 +175,14 @@ const MiniPlayer = () => {
                         className="flex items-center gap-3 p-3 px-5 cursor-pointer"
                     >
                         <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-zinc-800 shadow-lg border border-white/5">
-                            {imageUrl ? (
-                                <Image
-                                    src={imageUrl}
-                                    alt={currentSong.name}
-                                    fill
-                                    className="object-cover"
-                                    sizes="48px"
-                                />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                    <BiPlay size={24} className="text-gray-600" />
-                                </div>
-                            )}
+                            <SongImage
+                                src={imageUrl}
+                                alt={currentSong.name}
+                                fill
+                                className="object-cover"
+                                sizes="48px"
+                                fallbackSize={24}
+                            />
                         </div>
                         <div className="flex-1 min-w-0">
                             <h3 className="text-white font-bold text-sm line-clamp-1">
@@ -264,19 +259,14 @@ const MiniPlayer = () => {
                                 onClick={() => router.push('/player')}
                                 className="relative w-14 h-14 rounded overflow-hidden flex-shrink-0 cursor-pointer bg-zinc-800"
                             >
-                                {imageUrl ? (
-                                    <Image
-                                        src={imageUrl}
-                                        alt={currentSong.name}
-                                        fill
-                                        className="object-cover"
-                                        sizes="56px"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                        <BiPlay size={24} className="text-gray-600" />
-                                    </div>
-                                )}
+                                <SongImage
+                                    src={imageUrl}
+                                    alt={currentSong.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="56px"
+                                    fallbackSize={28}
+                                />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <h3

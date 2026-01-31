@@ -1,7 +1,7 @@
 'use client';
 
 import { useMusicStore } from '@/store/useMusicStore';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import he from 'he';
 import { BiPlay, BiDotsVerticalRounded, BiMusic } from 'react-icons/bi';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
@@ -54,19 +54,14 @@ const LastPlayed = () => {
                             >
                                 {/* Album Art */}
                                 <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                                    {song.image?.[0]?.url ? (
-                                        <Image
-                                            src={song.image[1]?.url || song.image[0]?.url}
-                                            alt={he.decode(song.name)}
-                                            fill
-                                            className="object-cover"
-                                            sizes="48px"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-                                            <BiMusic size={24} className="text-gray-500" />
-                                        </div>
-                                    )}
+                                    <SongImage
+                                        src={song.image[1]?.url || song.image[0]?.url}
+                                        alt={he.decode(song.name)}
+                                        fill
+                                        className="object-cover"
+                                        sizes="48px"
+                                        fallbackSize={24}
+                                    />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                         <BiPlay size={24} className="text-white drop-shadow-lg" />
                                     </div>
@@ -136,19 +131,14 @@ const LastPlayed = () => {
                             >
                                 {/* Album Art */}
                                 <div className="relative w-14 h-14 rounded-lg overflow-hidden flex-shrink-0">
-                                    {song.image?.[0]?.url ? (
-                                        <Image
-                                            src={song.image[2]?.url || song.image[1]?.url || song.image[0]?.url}
-                                            alt={he.decode(song.name)}
-                                            fill
-                                            className="object-cover"
-                                            sizes="56px"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-                                            <BiMusic size={28} className="text-gray-500" />
-                                        </div>
-                                    )}
+                                    <SongImage
+                                        src={song.image[2]?.url || song.image[1]?.url || song.image[0]?.url}
+                                        alt={he.decode(song.name)}
+                                        fill
+                                        className="object-cover"
+                                        sizes="56px"
+                                        fallbackSize={28}
+                                    />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                         <BiPlay size={28} className="text-white drop-shadow-lg" />
                                     </div>

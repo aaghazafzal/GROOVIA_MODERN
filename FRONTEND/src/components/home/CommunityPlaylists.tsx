@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { fetchPlaylistById } from '@/lib/api';
 import { communityPlaylists } from '@/data/communityPlaylists';
 import { useMusicStore } from '@/store/useMusicStore';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import he from 'he';
 import { BiPlay } from 'react-icons/bi';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
@@ -154,12 +154,13 @@ const CommunityPlaylists = () => {
                                 >
                                     {/* Mini Album Art */}
                                     <div className="relative w-10 h-10 rounded overflow-hidden flex-shrink-0">
-                                        <Image
+                                        <SongImage
                                             src={song.image?.[1]?.url || song.image?.[0]?.url}
                                             alt={he.decode(song.name)}
                                             fill
                                             className="object-cover"
                                             sizes="40px"
+                                            fallbackSize={20}
                                         />
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/song:opacity-100 transition-opacity flex items-center justify-center">
                                             <BiPlay size={20} className="text-white" />

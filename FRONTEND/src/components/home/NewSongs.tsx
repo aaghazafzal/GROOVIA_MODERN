@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { fetchPlaylistById } from '@/lib/api';
 import { useMusicStore } from '@/store/useMusicStore';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import he from 'he';
 import { BiPlay } from 'react-icons/bi';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
@@ -97,20 +97,14 @@ const NewSongs = () => {
                         >
                             {/* Large Album Art */}
                             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden mb-3">
-                                {song.image[song.image.length - 1]?.url ? (
-                                    <Image
-                                        src={song.image[song.image.length - 1]?.url}
-                                        alt={he.decode(song.name)}
-                                        fill
-                                        className="object-cover"
-                                        sizes="(max-width: 768px) 85vw"
-                                        quality={100}
-                                    />
-                                ) : (
-                                    <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-                                        <BiPlay size={40} className="text-gray-600" />
-                                    </div>
-                                )}
+                                <SongImage
+                                    src={song.image[song.image.length - 1]?.url}
+                                    alt={he.decode(song.name)}
+                                    fill
+                                    className="object-cover"
+                                    sizes="(max-width: 768px) 85vw"
+                                    fallbackSize={40}
+                                />
                                 {/* Gradient Overlay */}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
 
@@ -179,20 +173,14 @@ const NewSongs = () => {
                             >
                                 {/* Album Art */}
                                 <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-3 group-hover:shadow-[0_0_20px_rgba(124,58,237,0.3)] transition-shadow">
-                                    {song.image[song.image.length - 1]?.url ? (
-                                        <Image
-                                            src={song.image[song.image.length - 1]?.url}
-                                            alt={he.decode(song.name)}
-                                            fill
-                                            className="object-cover"
-                                            sizes="200px"
-                                            quality={100}
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-                                            <BiPlay size={24} className="text-gray-600" />
-                                        </div>
-                                    )}
+                                    <SongImage
+                                        src={song.image[song.image.length - 1]?.url}
+                                        alt={he.decode(song.name)}
+                                        fill
+                                        className="object-cover"
+                                        sizes="200px"
+                                        fallbackSize={60}
+                                    />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                         <div className="bg-primary text-white p-3 rounded-full shadow-xl transform scale-75 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-300">
                                             <BiPlay size={28} className="ml-0.5" />
