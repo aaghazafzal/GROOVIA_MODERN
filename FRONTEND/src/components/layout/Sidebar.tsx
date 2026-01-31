@@ -61,7 +61,10 @@ const Sidebar = () => {
             <div className="pb-6">
                 <div className="bg-gradient-to-br from-primary/10 to-transparent p-4 rounded-xl border border-white/5 relative overflow-hidden group">
                     <div className="absolute inset-0 bg-primary/20 blur-xl group-hover:bg-primary/30 transition-all duration-500"></div>
-                    <p className="text-xs text-gray-400 mb-1 relative z-10">Groovia AI</p>
+                    <div className="flex items-center justify-between mb-1 relative z-10">
+                        <p className="text-xs text-gray-400">Groovia AI</p>
+                        <span className="text-[10px] font-bold bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded border border-purple-500/20 shadow-[0_0_10px_rgba(168,85,247,0.2)]">BETA</span>
+                    </div>
                     <p className="text-sm font-semibold text-white relative z-10">Smart Playlist Generator</p>
                 </div>
             </div>
