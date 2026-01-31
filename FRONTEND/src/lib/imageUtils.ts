@@ -12,14 +12,14 @@ export const getImageUrl = (image: any, quality: 'low' | 'medium' | 'high' = 'hi
 
         if (quality === 'low') {
             // Use lowest quality (50x50), adequate for very small icons
-            return image[0]?.url || null;
+            // Fallback to others if 0 is missing
+            return image[0]?.url || image[1]?.url || image[image.length - 1]?.url || null;
         }
 
         if (quality === 'medium') {
             // Use medium quality (150x150), perfect for list items and cards
-            // If only 1 item exists, use it. If 2, use index 1 (usually higher) or 0?
-            // Safer to aim for index 1 if available.
-            return image[1]?.url || image[0]?.url || null;
+            // Fallback to 0 or High if 1 is missing. never return null if ANY url exists.
+            return image[1]?.url || image[0]?.url || image[image.length - 1]?.url || null;
         }
 
         // High quality (default)
