@@ -46,7 +46,7 @@ const LastPlayed = () => {
 
                 {/* Horizontal Scrolling Container with Grid */}
                 <div className="overflow-x-scroll scrollbar-hide -mx-4 px-4 scroll-smooth">
-                    <div className="inline-grid grid-rows-4 grid-flow-col gap-2 auto-cols-[62%] min-w-full">
+                    <div className="inline-grid grid-rows-4 grid-flow-col gap-2 auto-cols-[60%] min-w-full">
                         {mobileSongs.map((song) => (
                             <div
                                 key={song.id}
@@ -123,7 +123,7 @@ const LastPlayed = () => {
                     ref={scrollRef}
                     className="overflow-x-auto scrollbar-hide scroll-smooth"
                 >
-                    <div className="inline-grid grid-rows-4 grid-flow-col gap-2 auto-cols-[36%] min-w-full">
+                    <div className="inline-grid grid-rows-4 grid-flow-col gap-2 auto-cols-[34%] min-w-full">
                         {desktopSongs.map((song) => (
                             <div
                                 key={song.id}
