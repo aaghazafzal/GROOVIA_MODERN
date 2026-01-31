@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useMusicStore } from '@/store/useMusicStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/api';
@@ -28,7 +28,7 @@ import { IoShareOutline, IoChevronBack, IoChevronForward, IoLogoWhatsapp, IoLogo
 import SongImage from '@/components/ui/SongImage';
 import { getImageUrl } from '@/lib/imageUtils';
 
-export default function PlayerPage() {
+function PlayerContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const queryId = searchParams.get('id');
@@ -1177,5 +1177,17 @@ export default function PlayerPage() {
 
             {/* Audio managed by persistent MiniPlayer */}
         </>
+    );
+}
+
+export default function PlayerPage() {
+    return (
+        <Suspense fallback={
+            <div className="fixed inset-0 bg-sidebar flex items-center justify-center">
+                <BiLoaderAlt size={40} className="text-purple-500 animate-spin" />
+            </div>
+        }>
+            <PlayerContent />
+        </Suspense>
     );
 }
