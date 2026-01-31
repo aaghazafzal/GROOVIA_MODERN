@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
 import { useMusicStore } from '@/store/useMusicStore';
-import Image from 'next/image';
+import SongImage from '@/components/ui/SongImage';
 import Link from 'next/link';
 import he from 'he';
 import { BiPlay, BiDotsVerticalRounded, BiSearch, BiX } from 'react-icons/bi';
@@ -27,24 +27,6 @@ const filters: { id: FilterType; label: string }[] = [
     { id: 'artists', label: 'Artists' },
     { id: 'playlists', label: 'Playlists' },
 ];
-
-// Helper to validate and get image URL
-const getValidImageUrl = (item: any, preferredIdx?: number): string => {
-    try {
-        const url = preferredIdx !== undefined
-            ? item?.image?.[preferredIdx]?.url || item?.image?.[0]?.url
-            : item?.image?.[2]?.url || item?.image?.[1]?.url || item?.image?.[0]?.url;
-
-        if (!url || typeof url !== 'string' || url.startsWith('<!doctype') || url.startsWith('<') || url.length < 10) {
-            return 'https://via.placeholder.com/300/1a1a1a/ffffff?text=No+Image';
-        }
-        // Validate URL
-        new URL(url);
-        return url;
-    } catch {
-        return 'https://via.placeholder.com/300/1a1a1a/ffffff?text=No+Image';
-    }
-};
 
 export default function SearchPage() {
     const [query, setQuery] = useState('');
@@ -335,12 +317,13 @@ export default function SearchPage() {
                                         <Link href={`/artist/${results.topResult.id}`}>
                                             <div className="flex flex-col items-center text-center">
                                                 <div className="w-32 h-32 rounded-full overflow-hidden mb-4 relative bg-zinc-900">
-                                                    <Image
-                                                        src={getValidImageUrl(results.topResult)}
+                                                    <SongImage
+                                                        src={results.topResult.image?.[2]?.url || results.topResult.image?.[0]?.url}
                                                         alt={results.topResult.name || 'Artist'}
                                                         fill
                                                         className="object-cover"
                                                         sizes="128px"
+                                                        fallbackSize={48}
                                                     />
                                                 </div>
                                                 <h3 className="text-3xl font-bold text-white mb-2">{he.decode(results.topResult.name || '')}</h3>
@@ -350,12 +333,13 @@ export default function SearchPage() {
                                     ) : (
                                         <div>
                                             <div className="w-full aspect-square rounded-lg overflow-hidden mb-4 relative bg-zinc-900">
-                                                <Image
-                                                    src={getValidImageUrl(results.topResult)}
+                                                <SongImage
+                                                    src={results.topResult.image?.[2]?.url || results.topResult.image?.[0]?.url}
                                                     alt={results.topResult.name || 'Item'}
                                                     fill
                                                     className="object-cover"
                                                     sizes="300px"
+                                                    fallbackSize={80}
                                                 />
                                             </div>
                                             <h3 className="text-2xl font-bold text-white mb-2">{he.decode(results.topResult.name || '')}</h3>
@@ -393,7 +377,7 @@ export default function SearchPage() {
                                                     className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group h-[68px]"
                                                 >
                                                     <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-zinc-900">
-                                                        <Image src={getValidImageUrl(song, 1)} alt={song.name || 'Song'} fill className="object-cover" sizes="48px" />
+                                                        <SongImage src={song.image?.[1]?.url || song.image?.[0]?.url} alt={song.name || 'Song'} fill className="object-cover" sizes="48px" fallbackSize={24} />
                                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                             <BiPlay size={24} className="text-white" />
                                                         </div>
@@ -412,7 +396,7 @@ export default function SearchPage() {
                                         {results.songs.map((song) => (
                                             <div key={song.id} onClick={() => playSong({ ...song, type: 'song', url: song.url || '', downloadUrl: song.downloadUrl || [] })} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group">
                                                 <div className="relative w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-zinc-900">
-                                                    <Image src={getValidImageUrl(song, 1)} alt={song.name || 'Song'} fill className="object-cover" sizes="56px" />
+                                                    <SongImage src={song.image?.[1]?.url || song.image?.[0]?.url} alt={song.name || 'Song'} fill className="object-cover" sizes="56px" fallbackSize={28} />
                                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                         <BiPlay size={28} className="text-white" />
                                                     </div>
@@ -452,7 +436,7 @@ export default function SearchPage() {
                                             <Link key={album.id} href={`/album/${album.id}`} className={selectedFilter === 'all' ? 'flex-shrink-0 w-[185px] md:w-[200px]' : ''}>
                                                 <div className="group cursor-pointer">
                                                     <div className="relative aspect-square rounded-lg overflow-hidden mb-3 bg-zinc-900">
-                                                        <Image src={getValidImageUrl(album)} alt={album.name || 'Album'} fill className="object-cover group-hover:scale-105 transition-transform" sizes="200px" />
+                                                        <SongImage src={album.image?.[2]?.url || album.image?.[0]?.url} alt={album.name || 'Album'} fill className="object-cover group-hover:scale-105 transition-transform" sizes="200px" fallbackSize={60} />
                                                     </div>
                                                     <h3 className="text-white font-semibold text-sm line-clamp-2 mb-1">{he.decode(album.name || '')}</h3>
                                                     <p className="text-gray-400 text-xs line-clamp-1">{album.year || ''} • Album</p>
@@ -487,7 +471,7 @@ export default function SearchPage() {
                                             <Link key={artist.id} href={`/artist/${artist.id}`} className={selectedFilter === 'all' ? 'flex-shrink-0' : ''}>
                                                 <div className="flex flex-col items-center w-[160px] md:w-[160px] group cursor-pointer">
                                                     <div className="relative w-[160px] h-[160px] md:w-[160px] md:h-[160px] rounded-full overflow-hidden mb-3 bg-zinc-900">
-                                                        <Image src={getValidImageUrl(artist)} alt={artist.name || 'Artist'} fill className="object-cover" sizes="160px" />
+                                                        <SongImage src={artist.image?.[2]?.url || artist.image?.[0]?.url} alt={artist.name || 'Artist'} fill className="object-cover" sizes="160px" fallbackSize={60} />
                                                         <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
                                                             <div className="bg-primary text-white p-2.5 rounded-full shadow-2xl">
                                                                 <BiPlay size={24} />
@@ -527,7 +511,7 @@ export default function SearchPage() {
                                             <Link key={playlist.id} href={`/playlist/${playlist.id}`} className={selectedFilter === 'all' ? 'flex-shrink-0 w-[185px] md:w-[200px]' : ''}>
                                                 <div className="group cursor-pointer">
                                                     <div className="relative aspect-square rounded-lg overflow-hidden mb-3 bg-zinc-900">
-                                                        <Image src={getValidImageUrl(playlist)} alt={playlist.name || 'Playlist'} fill className="object-cover group-hover:scale-105 transition-transform" sizes="200px" />
+                                                        <SongImage src={playlist.image?.[2]?.url || playlist.image?.[0]?.url} alt={playlist.name || 'Playlist'} fill className="object-cover group-hover:scale-105 transition-transform" sizes="200px" fallbackSize={60} />
                                                     </div>
                                                     <h3 className="text-white font-semibold text-sm md:text-base line-clamp-2 mb-1">{he.decode(playlist.name || '')}</h3>
                                                     {playlist.description && <p className="text-gray-400 text-xs line-clamp-1">{he.decode(playlist.description)}</p>}
