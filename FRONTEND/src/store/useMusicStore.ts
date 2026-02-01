@@ -185,13 +185,39 @@ export const useMusicStore = create<MusicState>()(
                                     const suggestions = res.data?.data || [];
 
                                     if (suggestions.length > 0) {
-                                        // Take top related song for infinite chain
-                                        const nextRelated = suggestions[0];
+                                        // 1. Filter out songs that are already in history (last 20) or in the upcoming queue
+                                        const { history } = get();
+                                        const recentHistoryIds = new Set(history.slice(-20).map(s => s.id));
+                                        const queueIds = new Set(queue.map(s => s.id));
+                                        // Also add current song to avoid immediate loop
+                                        if (currentSong) recentHistoryIds.add(currentSong.id);
+
+                                        let candidates = suggestions.filter((s: any) => !recentHistoryIds.has(s.id) && !queueIds.has(s.id));
+
+                                        // 2. Fallback: If strict filtering leaves no candidates, loosen it (allow history, just avoid queue)
+                                        if (candidates.length === 0) {
+                                            candidates = suggestions.filter((s: any) => !queueIds.has(s.id));
+                                        }
+
+                                        // 3. Final Fallback: Just take from suggestions
+                                        if (candidates.length === 0) {
+                                            candidates = suggestions;
+                                        }
+
+                                        // 4. Selection Strategy: Prefer 2nd item to add variety/break "Best Match" loops
+                                        // but only if it's a strong match (available in candidates)
+                                        let nextRelated;
+                                        if (candidates.length >= 2) {
+                                            // Taking 2nd item (index 1) often breaks A<->B similarity loops
+                                            nextRelated = candidates[1];
+                                        } else {
+                                            nextRelated = candidates[0];
+                                        }
+
                                         const newQueue = [...queue, nextRelated];
                                         set({ queue: newQueue });
 
-                                        // Now we can play the next index (which is at the start of suggestions)
-                                        // nextIndex is already currentIndex + 1, which matches
+                                        // Now we can play the next index
                                         const nextSong = newQueue[nextIndex];
                                         if (nextSong) {
                                             const audioUrl = getAudioUrl(nextSong);
