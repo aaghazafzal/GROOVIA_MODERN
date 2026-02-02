@@ -252,7 +252,7 @@ function PlayerContent() {
             setLoadingRelated(true);
 
             if (currentSong.youtubeId) {
-                const response = await fetch(`http://localhost:8000/watch?videoId=${currentSong.youtubeId}`);
+                const response = await fetch(`${YT_API_URL}/watch?videoId=${currentSong.youtubeId}`);
                 const data = await response.json();
                 const tracks = data.data?.tracks || [];
                 const mappedSongs = tracks.map((t: any) => ({
@@ -260,7 +260,7 @@ function PlayerContent() {
                     name: t.title,
                     type: 'youtube', // distinctive
                     artists: { primary: t.artists ? t.artists.map((a: any) => ({ name: a.name })) : [{ name: 'Unknown' }] },
-                    image: t.thumbnail || [],
+                    image: t.thumbnail ? t.thumbnail.map((thumb: any) => ({ quality: 'high', url: thumb.url })) : [],
                     youtubeId: t.videoId
                 }));
                 setRelatedSongs(mappedSongs);

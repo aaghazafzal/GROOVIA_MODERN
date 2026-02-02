@@ -193,7 +193,7 @@ export const useMusicStore = create<MusicState>()(
                                                 name: t.title,
                                                 type: 'youtube',
                                                 artists: { primary: t.artists ? t.artists.map((a: any) => ({ name: a.name })) : [{ name: 'Unknown' }] },
-                                                image: t.thumbnail || [],
+                                                image: t.thumbnail ? t.thumbnail.map((thumb: any) => ({ quality: 'high', url: thumb.url })) : [],
                                                 youtubeId: t.videoId
                                             }));
                                         } catch (e) {
