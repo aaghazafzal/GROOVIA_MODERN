@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BiHomeAlt, BiSearch, BiLibrary, BiCompass } from 'react-icons/bi';
+import { SiYoutubemusic } from 'react-icons/si';
 import { HiOutlineHeart } from 'react-icons/hi';
 import clsx from 'clsx';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -17,6 +18,7 @@ const Sidebar = () => {
         { name: 'Discover', href: '/discover', icon: BiCompass },
         { name: 'Search', href: '/search', icon: BiSearch },
         { name: 'Your Library', href: '/library', icon: BiLibrary },
+        { name: 'YT Music', href: '/yt-music', icon: SiYoutubemusic },
     ];
 
     return (

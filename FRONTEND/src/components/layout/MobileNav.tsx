@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { BiHomeAlt, BiSearch, BiLibrary, BiCompass, BiUser } from 'react-icons/bi';
+import { SiYoutubemusic } from 'react-icons/si';
 // import { HiOutlineHeart } from 'react-icons/hi';
 import clsx from 'clsx';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -18,6 +19,7 @@ const MobileNav = () => {
         { name: 'Discover', href: '/discover', icon: BiCompass },
         { name: 'Search', href: '/search', icon: BiSearch },
         { name: 'Library', href: '/library', icon: BiLibrary },
+        { name: 'YT Music', href: '/yt-music', icon: SiYoutubemusic },
     ];
 
     return (
