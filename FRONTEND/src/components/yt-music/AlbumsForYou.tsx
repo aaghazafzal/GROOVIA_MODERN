@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { BiPlay, BiAlbum } from 'react-icons/bi';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
-import { BiPlay, BiDotsVerticalRounded, BiAlbum } from 'react-icons/bi';
 import he from 'he';
 
 const AlbumsForYou = () => {
+    const router = useRouter();
     const [albums, setAlbums] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -95,7 +97,11 @@ const AlbumsForYou = () => {
                 */}
                 <div className="flex gap-4">
                     {albums.map((album, idx) => (
-                        <div key={`${album.browseId}-${idx}`} className="flex-shrink-0 w-[42vw] sm:w-[160px] md:w-[180px] lg:w-[200px] group cursor-pointer flex flex-col gap-3">
+                        <div
+                            key={`${album.browseId}-${idx}`}
+                            onClick={() => router.push(`/album/${album.browseId}`)}
+                            className="flex-shrink-0 w-[42vw] sm:w-[160px] md:w-[180px] lg:w-[200px] group cursor-pointer flex flex-col gap-3"
+                        >
                             {/* Card Image */}
                             <div className="relative aspect-square rounded-lg overflow-hidden bg-zinc-800 shadow-md group-hover:shadow-purple-500/20 transition-all duration-300">
                                 {album.thumbnails?.[0]?.url ? (

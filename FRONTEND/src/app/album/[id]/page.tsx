@@ -63,6 +63,54 @@ export default function AlbumPage() {
     const fetchAlbumDetails = async () => {
         try {
             setLoading(true);
+
+            // Handle YouTube Music IDs (start with MPREb or OLAK5)
+            const idStr = String(params.id);
+            if (idStr.startsWith('MPREb') || idStr.startsWith('OLAK5')) {
+                try {
+                    const res = await fetch(`http://localhost:8000/album?browseId=${params.id}`);
+                    const json = await res.json();
+
+                    if (!json.data) throw new Error("No data");
+                    const ytData = json.data;
+
+                    const normalizedAlbum: AlbumData = {
+                        id: ytData.browseId || idStr,
+                        name: ytData.title,
+                        year: ytData.year ? String(ytData.year) : '',
+                        image: ytData.thumbnails?.map((t: any) => ({ quality: 'high', url: t.url })) || [],
+                        artists: { primary: ytData.artists || [] },
+                        songs: ytData.tracks?.map((t: any) => {
+                            // Parse duration "3:20" -> seconds string
+                            let durSec = 0;
+                            if (t.duration) {
+                                const p = t.duration.split(':').map(Number);
+                                if (p.length === 2) durSec = p[0] * 60 + p[1];
+                                if (p.length === 3) durSec = p[0] * 3600 + p[1] * 60 + p[2];
+                            }
+                            return {
+                                id: t.videoId,
+                                name: t.title,
+                                duration: String(durSec),
+                                image: ytData.thumbnails?.map((thumb: any) => ({ quality: 'high', url: thumb.url })) || [],
+                                artists: { primary: t.artists || ytData.artists || [] },
+                                // Proxied Stream URL
+                                downloadUrl: [{ quality: '320kbps', url: `http://localhost:8000/stream?videoId=${t.videoId}` }],
+                                url: `http://localhost:8000/stream?videoId=${t.videoId}`
+                            };
+                        }) || []
+                    };
+                    setAlbum(normalizedAlbum);
+                    return;
+                } catch (err) {
+                    console.error("YT Fetch Failed", err);
+                    // Fallback to Saavn logic if fails? Unlikely to match Saavn ID.
+                } finally {
+                    setLoading(false);
+                }
+                return;
+            }
+
             // API expects id as query parameter, not path parameter
             const response = await api.get('/albums', {
                 params: {
