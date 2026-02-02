@@ -76,23 +76,10 @@ const QuickPicks = () => {
             album: { name: song.album?.name || 'YouTube Music' },
         };
 
-        // Create queue from all loaded songs
-        const queueList = songs.map(s => ({
-            id: s.videoId,
-            name: s.title,
-            type: 'youtube',
-            youtubeId: s.videoId,
-            url: '',
-            image: s.thumbnails?.map((t: any) => ({ quality: 'high', url: t.url })) || [],
-            downloadUrl: [],
-            artists: {
-                primary: s.artists?.map((a: any) => ({ name: a.name })) || []
-            },
-            duration: s.duration,
-            album: { name: s.album?.name || 'YouTube Music' },
-        }));
-
-        setQueue(queueList);
+        // Radio Mode: Set queue to ONLY this song.
+        // This triggers the Store's "Autoplay" logic immediately when this song ends,
+        // fetching "Related/Watch Playlist" songs, which matches user expectation.
+        setQueue([songObj]);
         playSong(songObj);
     };
 

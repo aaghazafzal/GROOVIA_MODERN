@@ -87,22 +87,9 @@ const LongListening = () => {
             album: { name: song.album?.name || 'YouTube Music' },
         };
 
-        const queueList = songs.map(s => ({
-            id: s.videoId,
-            name: s.title,
-            type: 'youtube',
-            youtubeId: s.videoId,
-            url: '',
-            image: s.thumbnails?.map((t: any) => ({ quality: 'high', url: t.url })) || [],
-            downloadUrl: [],
-            artists: {
-                primary: s.artists?.map((a: any) => ({ name: a.name })) || []
-            },
-            duration: s.duration,
-            album: { name: s.album?.name || 'YouTube Music' },
-        }));
-
-        setQueue(queueList);
+        // Radio Mode: Set queue to ONLY this song.
+        // Triggers global Autoplay for infinite related songs.
+        setQueue([songObj]);
         playSong(songObj);
     };
 
