@@ -369,6 +369,7 @@ const MiniPlayer = () => {
             {/* Standard Audio */}
             {!isYoutube && audioUrl && (
                 <audio
+                    key={currentSong?.id || 'audio-player'}
                     ref={audioRef}
                     src={audioUrl}
                     onTimeUpdate={(e) => {

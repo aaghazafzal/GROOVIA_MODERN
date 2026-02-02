@@ -648,7 +648,7 @@ function PlayerContent() {
                 <div className="px-6 py-8">
                     <div className="relative w-full aspect-square rounded-2xl overflow-hidden shadow-2xl">
                         <SongImage
-                            src={currentSong.image?.[2]?.url || currentSong.image?.[0]?.url}
+                            src={getImageUrl(currentSong.image)}
                             alt={currentSong.name}
                             fill
                             className="object-cover"
