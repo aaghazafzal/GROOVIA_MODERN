@@ -94,7 +94,7 @@ export default function AlbumPage() {
                                 duration: String(durSec),
                                 image: ytData.thumbnails?.map((thumb: any) => ({ quality: 'high', url: thumb.url })) || [],
                                 artists: { primary: t.artists || ytData.artists || [] },
-                                // Proxied Stream URL
+                                youtubeId: t.videoId, // For Embed Player
                                 downloadUrl: [{ quality: '320kbps', url: `http://localhost:8000/stream?videoId=${t.videoId}` }],
                                 url: `http://localhost:8000/stream?videoId=${t.videoId}`
                             };
