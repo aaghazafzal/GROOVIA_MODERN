@@ -26,7 +26,7 @@ import {
 import { HiOutlineHeart, HiHeart } from 'react-icons/hi';
 import { IoShareOutline, IoChevronBack, IoChevronForward, IoLogoWhatsapp, IoLogoFacebook, IoLogoTwitter, IoCopyOutline, IoClose } from 'react-icons/io5';
 import SongImage from '@/components/ui/SongImage';
-import { getImageColor } from '@/lib/colorUtils';
+import { getImageUrl } from '@/lib/imageUtils';
 import { YT_API_URL } from '@/lib/config';
 
 function PlayerContent() {
