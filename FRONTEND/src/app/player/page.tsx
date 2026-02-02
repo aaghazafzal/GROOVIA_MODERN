@@ -81,13 +81,9 @@ function PlayerContent() {
     useEffect(() => {
         if (!currentSong?.id) return;
 
-        if (activeTab === 'related') {
-            fetchRelatedSongs();
-        }
-
-        // Always pre-fetch details for smoother experience
+        fetchRelatedSongs();
         fetchSongDetails();
-    }, [activeTab, currentSong?.id]);
+    }, [currentSong?.id]);
 
     const fetchSongDetails = async () => {
         if (!currentSong?.id) return;
