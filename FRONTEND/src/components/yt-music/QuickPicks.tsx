@@ -19,27 +19,34 @@ const QuickPicks = ({ onPlay }: QuickPicksProps) => {
         const fetchSongs = async () => {
             try {
                 setLoading(true);
-                // Combined queries to get individual songs, not just "Mixes"
-                // Using "Songs" or specific genre hits to avoid Playlist results primarily
-                const queries = ['Top 50 Global Songs', 'New Released Songs', 'Trending Songs Hindi English', 'Viral Hits Songs'];
-                const randomQuery = queries[Math.floor(Math.random() * queries.length)];
+                // Combined queries to get individual songs
+                const queries = ['Bollywood Top 50', 'Arijit Singh Best', 'Global Top 50', 'Trending Reels', 'Punjabi Top Hits'];
 
-                // Fetch more to ensure we have enough valid video items
-                const res = await fetch(`http://localhost:8000/search?query=${encodeURIComponent(randomQuery)}`);
-                const data = await res.json();
+                // Fetch all in parallel
+                // Use limit=10 per query to get enough candidates
+                const results = await Promise.all(
+                    queries.map(q =>
+                        fetch(`http://localhost:8000/search?query=${encodeURIComponent(q)}&filter=songs&limit=10`)
+                            .then(res => res.json())
+                            .then(data => data.data || [])
+                            .catch(() => [])
+                    )
+                );
 
-                // Filter only songs/videos (exclude huge playlists if possible, but search returns mixed)
-                // Filter where 'videoId' exists.
-                let validSongs = (data.data || []).filter((item: any) => item.videoId);
+                const allSongs = results.flat();
 
-                // User requirement: Exactly 16 songs.
-                // If we don't have enough, we might need to duplicate or fetch more? 
-                // Usually search returns ~20.
-                if (validSongs.length > 16) {
-                    validSongs = validSongs.slice(0, 16);
-                }
+                // Remove duplicates by videoId
+                const uniqueSongsMap = new Map();
+                allSongs.forEach((item: any) => {
+                    if (item.videoId) uniqueSongsMap.set(item.videoId, item);
+                });
 
-                setSongs(validSongs);
+                const uniqueSongs = Array.from(uniqueSongsMap.values());
+
+                // Shuffle and Slice to 16
+                const shuffled = uniqueSongs.sort(() => 0.5 - Math.random());
+                setSongs(shuffled.slice(0, 16));
+
             } catch (err) {
                 console.error("Error fetching Quick Picks:", err);
             } finally {

@@ -2,14 +2,18 @@
 
 import { useState } from 'react';
 import QuickPicks from '@/components/yt-music/QuickPicks';
+import AlbumsForYou from '@/components/yt-music/AlbumsForYou';
 
 export default function YTMusicPage() {
     const [currentVideoId, setCurrentVideoId] = useState<string | null>(null);
 
     return (
         <div className="min-h-screen pb-32">
-            {/* Section 1: Quick Picks (Recreated like TrendingOnSocials) */}
+            {/* Section 1: Quick Picks */}
             <QuickPicks onPlay={setCurrentVideoId} />
+
+            {/* Section 2: Albums for You */}
+            <AlbumsForYou />
 
             {/* Additional sections will be added here as requested */}
 
