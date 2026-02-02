@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
 import { useMusicStore } from '@/store/useMusicStore';
+import { useSearchStore } from '@/store/useSearchStore';
 import SongImage from '@/components/ui/SongImage';
 import { getImageUrl } from '@/lib/imageUtils';
 import Link from 'next/link';
@@ -57,24 +58,26 @@ const mapYoutubeResult = (item: any) => {
 };
 
 export default function SearchPage() {
-    const [query, setQuery] = useState('');
-    const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
-    const [searchSource, setSearchSource] = useState<'groovia' | 'ytmusic'>('groovia');
-    const [showSourceMenu, setShowSourceMenu] = useState(false);
+    const {
+        query, setQuery,
+        selectedFilter, setSelectedFilter: setSelectedFilterStore,
+        searchSource, setSearchSource,
+        results, setResults
+    } = useSearchStore();
 
-    const [results, setResults] = useState<SearchResults>({
-        songs: [],
-        albums: [],
-        artists: [],
-        playlists: [],
-        videos: [],
-        topResult: null,
-    });
+    // Type casting wrapper if needed, or simply alias
+    const setSelectedFilter = (filter: FilterType) => setSelectedFilterStore(filter);
+
+    const [showSourceMenu, setShowSourceMenu] = useState(false);
     const [loading, setLoading] = useState(false);
     const [showHeader, setShowHeader] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
     const [searchHistory, setSearchHistory] = useState<string[]>([]);
     const playSong = useMusicStore((state) => state.playSong);
+
+    useEffect(() => {
+        useSearchStore.persist.rehydrate();
+    }, []);
 
     const songsScrollRef = useRef<HTMLDivElement>(null);
     const albumsScrollRef = useRef<HTMLDivElement>(null);
