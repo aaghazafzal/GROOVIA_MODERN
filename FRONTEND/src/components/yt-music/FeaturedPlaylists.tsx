@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
 import { BiPlay, BiDotsVerticalRounded } from 'react-icons/bi';
 import { RiPlayListFill } from 'react-icons/ri';
 import he from 'he';
 
 const FeaturedPlaylists = () => {
+    const router = useRouter();
     const [playlists, setPlaylists] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -84,7 +86,11 @@ const FeaturedPlaylists = () => {
             <div ref={scrollRef} className="overflow-x-auto scrollbar-hide scroll-smooth -mx-4 px-4 md:mx-0 md:px-0">
                 <div className="flex gap-4">
                     {playlists.map((playlist, idx) => (
-                        <div key={`${playlist.browseId}-${idx}`} className="flex-shrink-0 w-[42vw] sm:w-[160px] md:w-[180px] lg:w-[200px] group cursor-pointer flex flex-col gap-3">
+                        <div
+                            key={`${playlist.browseId}-${idx}`}
+                            onClick={() => router.push(`/playlist/${playlist.browseId}`)}
+                            className="flex-shrink-0 w-[42vw] sm:w-[160px] md:w-[180px] lg:w-[200px] group cursor-pointer flex flex-col gap-3"
+                        >
                             <div className="relative aspect-square rounded-lg overflow-hidden bg-zinc-800 shadow-md group-hover:shadow-purple-500/20 transition-all duration-300">
                                 {playlist.thumbnails?.[0]?.url ? (
                                     <img

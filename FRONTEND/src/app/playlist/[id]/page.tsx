@@ -157,6 +157,51 @@ export default function PlaylistPage() {
         const id = params.id as string;
 
         try {
+            // Case 0: YouTube Playlist (PL, VL, RD prefixes)
+            if (id.startsWith('PL') || id.startsWith('VL') || id.startsWith('RD') || id.startsWith('OLAK5')) { // OLAK5 can be Album or Playlist in some contexts, but let's safe guard
+                try {
+                    const res = await fetch(`http://localhost:8000/playlist?browseId=${id}`);
+                    const json = await res.json();
+
+                    if (!json.data) throw new Error("No data");
+                    const ytData = json.data;
+
+                    const formattedPlaylist: PlaylistData = {
+                        id: ytData.id || id,
+                        name: ytData.title,
+                        description: ytData.description || '',
+                        image: ytData.thumbnails?.map((t: any) => ({ quality: 'high', url: t.url })) || [],
+                        firstname: ytData.author?.name || 'YouTube Music',
+                        year: ytData.year || new Date().getFullYear().toString(),
+                        songCount: ytData.trackCount || ytData.tracks?.length || 0,
+                        songs: ytData.tracks?.map((t: any) => {
+                            let durSec = 0;
+                            if (t.duration) {
+                                const parts = t.duration.split(':').map(Number);
+                                if (parts.length === 3) durSec = parts[0] * 3600 + parts[1] * 60 + parts[2];
+                                else if (parts.length === 2) durSec = parts[0] * 60 + parts[1];
+                            }
+                            return {
+                                id: t.videoId,
+                                name: t.title,
+                                duration: String(durSec),
+                                image: t.thumbnails?.map((thumb: any) => ({ quality: 'high', url: thumb.url })) || [],
+                                artists: { primary: t.artists || [] },
+                                downloadUrl: [{ quality: '320kbps', url: `http://localhost:8000/stream?videoId=${t.videoId}` }],
+                                url: `http://localhost:8000/stream?videoId=${t.videoId}`
+                            };
+                        }) || []
+                    };
+                    setPlaylist(formattedPlaylist);
+                    return;
+                } catch (err) {
+                    console.error("YT Playlist Fetch Failed", err);
+                } finally {
+                    setLoading(false);
+                }
+                return;
+            }
+
             // Case 1: Liked Songs
             if (id === 'liked') {
                 if (!userData) {
