@@ -79,9 +79,8 @@ from pytubefix.cli import on_progress
 @app.get("/stream")
 def stream_audio(videoId: str):
     """
-    Extract direct audio stream URL using yt-dlp Python API with fallback to pytubefix.
+    Extract direct audio stream URL using multiple methods.
     Returns a redirect to the direct Google CDN URL.
-    Supports geo-restricted and regional content (Pakistani, etc.)
     """
     try:
         # Check cache first
@@ -90,54 +89,69 @@ def stream_audio(videoId: str):
             return RedirectResponse(url=cached)
 
         url = None
-        
-        # Method 1: yt-dlp with mobile client spoofing (Best for most restricted content)
-        try:
-            ydl_opts = {
-                'format': 'bestaudio[ext=m4a]/bestaudio/best',
-                'quiet': True,
-                'no_warnings': True,
-                'extract_flat': False,
-                'geo_bypass': True,
-                'nocheckcertificate': True,
-                'socket_timeout': 15,
-                'retries': 2,
-                'source_address': '0.0.0.0',
-                # Spoof Android client to bypass age-gates/embed-blocks
-                'extractor_args': {
-                    'youtube': {
-                        'player_client': ['android', 'ios']
+        methods_tried = []
+
+        # Client configurations to try
+        clients_to_try = [
+            {'player_client': ['android'], 'name': 'Android'},
+            {'player_client': ['ios'], 'name': 'iOS'},
+            {'player_client': ['web'], 'name': 'Web'},
+            {'player_client': ['tv'], 'name': 'TV'},
+        ]
+
+        # Method 1: yt-dlp with various clients
+        for client in clients_to_try:
+            try:
+                print(f"Trying yt-dlp with {client['name']} client for {videoId}...")
+                ydl_opts = {
+                    'format': 'bestaudio[ext=m4a]/bestaudio/best',
+                    'quiet': True,
+                    'no_warnings': True,
+                    'extract_flat': False,
+                    'geo_bypass': True,
+                    'nocheckcertificate': True,
+                    'socket_timeout': 10,
+                    'retries': 1,
+                    'source_address': '0.0.0.0',
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': client['player_client']
+                        }
                     }
                 }
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(f'https://www.youtube.com/watch?v={videoId}', download=False)
-                url = info.get('url')
-                if not url:
-                    # Deep format search
-                    formats = info.get('formats', [])
-                    audio_formats = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none']
-                    if audio_formats:
-                        audio_formats.sort(key=lambda f: f.get('abr', 0) or 0, reverse=True)
-                        url = audio_formats[0].get('url')
-        except Exception as e:
-            print(f"yt-dlp failed for {videoId}: {e}")
-            url = None
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(f'https://www.youtube.com/watch?v={videoId}', download=False)
+                    url = info.get('url')
+                    if not url:
+                        formats = info.get('formats', [])
+                        audio_formats = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none']
+                        if audio_formats:
+                            audio_formats.sort(key=lambda f: f.get('abr', 0) or 0, reverse=True)
+                            url = audio_formats[0].get('url')
+                
+                if url:
+                    print(f"Success with {client['name']} client!")
+                    break
+            except Exception as e:
+                methods_tried.append(f"yt-dlp-{client['name']}: {str(e)}")
+                continue
 
-        # Method 2: pytubefix fallback (Handles js-interp/cipher better in some cases)
+        # Method 2: pytubefix fallback (Simple, no callback)
         if not url:
             try:
                 print(f"Falling back to pytubefix for {videoId}")
-                yt = PytubeYouTube(f'https://www.youtube.com/watch?v={videoId}', on_progress_callback=on_progress)
+                yt = PytubeYouTube(f'https://www.youtube.com/watch?v={videoId}')
                 stream = yt.streams.get_audio_only()
                 if stream:
                     url = stream.url
+                    print("Success with pytubefix!")
             except Exception as e:
-                print(f"pytubefix failed for {videoId}: {e}")
-                url = None
+                methods_tried.append(f"pytubefix: {str(e)}")
 
         if not url:
-            raise Exception("All extraction methods failed")
+            error_msg = f"All extraction methods failed. Details: {'; '.join(methods_tried)}"
+            print(error_msg)
+            raise Exception(error_msg)
 
         # Cache the URL
         stream_cache[videoId] = {"url": url, "time": time.time()}
@@ -146,7 +160,6 @@ def stream_audio(videoId: str):
 
     except Exception as e:
         print(f"Error streaming {videoId}: {e}")
-        # Return a 404 or specialized error instead of 500 crash if possible, but 500 is standard failure
         raise HTTPException(status_code=500, detail=f"Streaming failed: {str(e)}")
 
 
@@ -154,7 +167,6 @@ def stream_audio(videoId: str):
 def get_stream_url(videoId: str):
     """
     Same as /stream but returns JSON instead of redirect.
-    Useful for frontend to get the URL directly.
     """
     try:
         cached = get_cached_url(videoId)
@@ -162,52 +174,69 @@ def get_stream_url(videoId: str):
             return {"url": cached}
 
         url = None
-        
-        # Method 1: yt-dlp
-        try:
-            ydl_opts = {
-                'format': 'bestaudio[ext=m4a]/bestaudio/best',
-                'quiet': True,
-                'no_warnings': True,
-                'extract_flat': False,
-                'geo_bypass': True,
-                'nocheckcertificate': True,
-                'socket_timeout': 15,
-                'retries': 2,
-                'source_address': '0.0.0.0',
-                'extractor_args': {
-                    'youtube': {
-                        'player_client': ['android', 'ios']
+        methods_tried = []
+
+        # Client configurations to try
+        clients_to_try = [
+            {'player_client': ['android'], 'name': 'Android'},
+            {'player_client': ['ios'], 'name': 'iOS'},
+            {'player_client': ['web'], 'name': 'Web'},
+            {'player_client': ['tv'], 'name': 'TV'},
+        ]
+
+        # Method 1: yt-dlp with various clients
+        for client in clients_to_try:
+            try:
+                print(f"Trying yt-dlp with {client['name']} client for {videoId}...")
+                ydl_opts = {
+                    'format': 'bestaudio[ext=m4a]/bestaudio/best',
+                    'quiet': True,
+                    'no_warnings': True,
+                    'extract_flat': False,
+                    'geo_bypass': True,
+                    'nocheckcertificate': True,
+                    'socket_timeout': 10,
+                    'retries': 1,
+                    'source_address': '0.0.0.0',
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': client['player_client']
+                        }
                     }
                 }
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(f'https://www.youtube.com/watch?v={videoId}', download=False)
-                url = info.get('url')
-                if not url:
-                    formats = info.get('formats', [])
-                    audio_formats = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none']
-                    if audio_formats:
-                        audio_formats.sort(key=lambda f: f.get('abr', 0) or 0, reverse=True)
-                        url = audio_formats[0].get('url')
-        except Exception as e:
-            print(f"yt-dlp failed for {videoId}: {e}")
-            url = None
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(f'https://www.youtube.com/watch?v={videoId}', download=False)
+                    url = info.get('url')
+                    if not url:
+                        formats = info.get('formats', [])
+                        audio_formats = [f for f in formats if f.get('acodec') != 'none' and f.get('vcodec') == 'none']
+                        if audio_formats:
+                            audio_formats.sort(key=lambda f: f.get('abr', 0) or 0, reverse=True)
+                            url = audio_formats[0].get('url')
+                
+                if url:
+                    print(f"Success with {client['name']} client!")
+                    break
+            except Exception as e:
+                methods_tried.append(f"yt-dlp-{client['name']}: {str(e)}")
+                continue
 
         # Method 2: pytubefix fallback
         if not url:
             try:
                 print(f"Falling back to pytubefix for {videoId}")
-                yt = PytubeYouTube(f'https://www.youtube.com/watch?v={videoId}', on_progress_callback=on_progress)
+                yt = PytubeYouTube(f'https://www.youtube.com/watch?v={videoId}')
                 stream = yt.streams.get_audio_only()
                 if stream:
                     url = stream.url
+                    print("Success with pytubefix!")
             except Exception as e:
-                print(f"pytubefix failed for {videoId}: {e}")
-                url = None
+                methods_tried.append(f"pytubefix: {str(e)}")
 
         if not url:
-            raise Exception("All extraction methods failed")
+            error_msg = f"All extraction methods failed. Details: {'; '.join(methods_tried)}"
+            print(error_msg)
+            raise Exception(error_msg)
 
         stream_cache[videoId] = {"url": url, "time": time.time()}
         return {"url": url}
