@@ -51,14 +51,74 @@ def read_root():
 @app.get("/search")
 def search(query: str, filter: str = None, limit: int = 20):
     try:
-        # Try primary method: ytmusicapi
+        # 1. Try Primary: ytmusicapi
+        # Filter mapping: songs->songs, videos->videos, albums->albums, playlists->playlists
         results = yt.search(query, filter=filter, limit=limit)
         return {"data": results}
     except Exception as e:
         print(f"ytmusicapi search failed: {e}")
+        
+        # 2. Try Secondary: Piped API (Nuclear Option - Reliable)
         try:
-            # Fallback method: yt-dlp search
-            # Map 'songs' filter to yt-dlp
+            print("Falling back to Piped API search...")
+            piped_instances = [
+                "https://pipedapi.kavin.rocks",
+                "https://api.piped.otter.sh",
+                "https://pipedapi.drgns.space"
+            ]
+            
+            # Map Groovia filter to Piped filter
+            piped_filter = "all"
+            if filter == "songs": piped_filter = "music_songs"
+            elif filter == "videos": piped_filter = "videos"
+            elif filter == "albums": piped_filter = "music_albums"
+            elif filter == "playlists": piped_filter = "playlists"
+            elif filter == "artists": piped_filter = "channels"
+
+            for api_base in piped_instances:
+                try:
+                    resp = requests.get(f"{api_base}/search?q={query}&filter={piped_filter}", timeout=5)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        items = data.get('items', [])[:limit]
+                        
+                        # Map Piped results to Groovia frontend format
+                        mapped_results = []
+                        for item in items:
+                            # Unified structure matching ytmusicapi output
+                            res = {
+                                "videoId": item.get('url', '').replace('/watch?v=', ''),
+                                "title": item.get('title'),
+                                "artists": [{"name": item.get('uploaderName'), "id": item.get('uploaderUrl', '').replace('/channel/', '')}],
+                                "album": {"name": "", "id": ""},
+                                "duration": item.get('duration_string') or calculate_duration(item.get('duration', 0)),
+                                "thumbnails": [{"url": item.get('thumbnail'), "width": 0, "height": 0}],
+                                "isExplicit": False,
+                                "category": "Song" if filter == "songs" else "Video"
+                            }
+                            
+                            # Type-specific adjustments
+                            if filter == "albums" or item.get('type') == 'playlist':
+                                res['browseId'] = item.get('url', '').replace('/playlist?list=', '')
+                                res['category'] = "Album" if filter == "albums" else "Playlist"
+                                del res['videoId']
+                            
+                            if filter == "playlists":
+                                res['browseId'] = item.get('url', '').replace('/playlist?list=', '')
+                                res['category'] = "Playlist"
+                                del res['videoId']
+
+                            mapped_results.append(res)
+                            
+                        if mapped_results:
+                            return {"data": mapped_results}
+                except:
+                    continue
+        except Exception as e3:
+             print(f"Piped search failed: {e3}")
+
+        # 3. Tertiary: yt-dlp Search (Slow but works locally)
+        try:
             print("Falling back to yt-dlp search...")
             ydl_opts = {
                 'quiet': True,
@@ -74,7 +134,6 @@ def search(query: str, filter: str = None, limit: int = 20):
                 info = ydl.extract_info(search_query, download=False)
                 entries = info.get('entries', [])
                 
-                # Transform to fit frontend structure
                 mapped_results = []
                 for entry in entries:
                     mapped_results.append({
@@ -90,6 +149,11 @@ def search(query: str, filter: str = None, limit: int = 20):
         except Exception as e2:
             print(f"All search methods failed: {e2}")
             return {"data": []}
+
+def calculate_duration(seconds):
+    if not seconds: return "0:00"
+    m, s = divmod(seconds, 60)
+    return f"{m}:{s:02d}"
 
 
 @app.get("/watch")
