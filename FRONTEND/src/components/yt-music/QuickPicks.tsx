@@ -11,10 +11,8 @@ import { useYTCacheStore } from '@/store/useYTCacheStore';
 const QuickPicks = () => {
     const scrollRef = useRef<HTMLDivElement>(null);
     const songs = useYTCacheStore((state) => state.quickPicks);
-    const isPrefetching = useYTCacheStore((state) => state.isPrefetching);
-    const hasPrefetched = useYTCacheStore((state) => state.hasPrefetched);
-
-    const loading = !hasPrefetched || (songs.length === 0 && isPrefetching);
+    const qpReady = useYTCacheStore((state) => state.qpReady);
+    const loading = !qpReady;
 
     const playSong = useMusicStore((state) => state.playSong);
     const setQueue = useMusicStore((state) => state.setQueue);

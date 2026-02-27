@@ -18,9 +18,8 @@ const RANK_COLORS = [
 const TrendingCharts = () => {
     const scrollRef = useRef<HTMLDivElement>(null);
     const songs = useYTCacheStore((state) => state.trendingCharts);
-    const isPrefetching = useYTCacheStore((state) => state.isPrefetching);
-    const hasPrefetched = useYTCacheStore((state) => state.hasPrefetched);
-    const loading = !hasPrefetched || (songs.length === 0 && isPrefetching);
+    const chartsReady = useYTCacheStore((state) => state.chartsReady);
+    const loading = !chartsReady;
 
     const playSong = useMusicStore((state) => state.playSong);
     const setQueue = useMusicStore((state) => state.setQueue);

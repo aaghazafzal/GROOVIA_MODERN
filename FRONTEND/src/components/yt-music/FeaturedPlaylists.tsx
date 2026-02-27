@@ -13,10 +13,8 @@ const FeaturedPlaylists = () => {
     const router = useRouter();
     const scrollRef = useRef<HTMLDivElement>(null);
     const playlists = useYTCacheStore((state) => state.featuredPlaylists);
-    const isPrefetching = useYTCacheStore((state) => state.isPrefetching);
-    const hasPrefetched = useYTCacheStore((state) => state.hasPrefetched);
-
-    const loading = !hasPrefetched || (playlists.length === 0 && isPrefetching);
+    const fpReady = useYTCacheStore((state) => state.fpReady);
+    const loading = !fpReady;
 
     const handleScroll = (direction: 'left' | 'right') => {
         if (scrollRef.current) {

@@ -12,10 +12,8 @@ const AlbumsForYou = () => {
     const router = useRouter();
     const scrollRef = useRef<HTMLDivElement>(null);
     const albums = useYTCacheStore((state) => state.albumsForYou);
-    const isPrefetching = useYTCacheStore((state) => state.isPrefetching);
-    const hasPrefetched = useYTCacheStore((state) => state.hasPrefetched);
-
-    const loading = !hasPrefetched || (albums.length === 0 && isPrefetching);
+    const afyReady = useYTCacheStore((state) => state.afyReady);
+    const loading = !afyReady;
 
     const handleScroll = (direction: 'left' | 'right') => {
         if (scrollRef.current) {
