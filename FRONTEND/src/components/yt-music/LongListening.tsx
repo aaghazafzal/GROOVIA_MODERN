@@ -1,14 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { BiPlay, BiDotsVerticalRounded, BiTimeFive } from 'react-icons/bi';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
 import he from 'he';
 
 import { useMusicStore } from '@/store/useMusicStore';
 import { useYTCacheStore } from '@/store/useYTCacheStore';
-
-interface LongListeningProps { } // No props needed anymore
 
 const LongListening = () => {
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -17,8 +15,6 @@ const LongListening = () => {
     const hasPrefetched = useYTCacheStore((state) => state.hasPrefetched);
 
     const loading = !hasPrefetched || (songs.length === 0 && isPrefetching);
-
-
 
     const playSong = useMusicStore((state) => state.playSong);
     const setQueue = useMusicStore((state) => state.setQueue);
@@ -38,17 +34,13 @@ const LongListening = () => {
             duration: song.duration,
             album: { name: song.album?.name || 'YouTube Music' },
         };
-
-        // Radio Mode: Set queue to ONLY this song.
-        // Triggers global Autoplay for infinite related songs.
         setQueue([songObj]);
         playSong(songObj);
     };
 
     const handleScroll = (direction: 'left' | 'right') => {
         if (scrollRef.current) {
-            const scrollAmount = 500;
-            scrollRef.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+            scrollRef.current.scrollBy({ left: direction === 'left' ? -500 : 500, behavior: 'smooth' });
         }
     };
 
@@ -68,12 +60,12 @@ const LongListening = () => {
     if (songs.length === 0) return null;
 
     return (
-        <div className="relative py-8 px-4 md:px-8">
+        <div className="relative py-4 md:py-8 md:px-8">
             {/* Header */}
-            <div className="flex justify-between items-end mb-6">
+            <div className="flex justify-between items-end mb-3 md:mb-6">
                 <div>
-                    <span className="text-gray-400 text-xs uppercase tracking-wider font-bold block mb-1">Non-stop Jukeboxes & Mashups</span>
-                    <h2 className="text-3xl md:text-4xl font-bold text-white">Long Listening</h2>
+                    <span className="text-gray-400 text-xs uppercase tracking-wider font-bold block mb-1">Non-stop Jukeboxes &amp; Mashups</span>
+                    <h2 className="text-2xl md:text-4xl font-bold text-white">Long Listening</h2>
                 </div>
                 <div className="hidden md:flex gap-2">
                     <button onClick={() => handleScroll('left')} className="p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 transition-colors">
@@ -85,20 +77,21 @@ const LongListening = () => {
                 </div>
             </div>
 
+            {/* Scroll container — edge to edge on mobile */}
             <div ref={scrollRef} className="overflow-x-auto scrollbar-hide scroll-smooth -mx-4 px-4 md:mx-0 md:px-0">
-                {/* 
-                    Mobile: 1 full column + peek (85%)
-                    Desktop: 2 full columns + half of 3rd (40% width)
-                 */}
-                <div className="inline-grid grid-rows-4 grid-flow-col gap-x-6 gap-y-3 auto-cols-[85%] md:auto-cols-[40%] lg:auto-cols-[35%]">
+                {/*
+                  Mobile: auto-cols-[88%] (1 full item visible, hint of next)
+                  Desktop: 2 full + third peeking
+                */}
+                <div className="inline-grid grid-rows-4 grid-flow-col gap-x-2 gap-y-1 md:gap-x-6 md:gap-y-3 auto-cols-[88%] md:auto-cols-[40%] lg:auto-cols-[35%]">
                     {songs.map((song, idx) => (
                         <div
                             key={`${song.videoId}-${idx}`}
                             onClick={() => handlePlay(song)}
-                            className="flex items-center gap-4 p-2 rounded-xl hover:bg-white/5 transition-all cursor-pointer group select-none"
+                            className="flex items-center gap-3 md:gap-4 p-2 rounded-xl hover:bg-white/5 transition-all cursor-pointer group select-none"
                         >
-                            {/* Landscape Thumbnail for Long Listening */}
-                            <div className="relative w-32 h-[4.5rem] rounded-lg overflow-hidden flex-shrink-0 bg-zinc-800 shadow-md">
+                            {/* Landscape Thumbnail */}
+                            <div className="relative w-24 h-14 md:w-32 md:h-[4.5rem] rounded-lg overflow-hidden flex-shrink-0 bg-zinc-800 shadow-md">
                                 {song.thumbnails?.[0]?.url ? (
                                     <img
                                         src={song.thumbnails[0].url}
@@ -108,35 +101,31 @@ const LongListening = () => {
                                     />
                                 ) : null}
 
-                                {/* Fallback */}
                                 <div className={`fallback-icon absolute inset-0 bg-zinc-800 flex items-center justify-center ${song.thumbnails?.[0]?.url ? 'hidden' : 'flex'}`}>
-                                    <BiTimeFive className="text-gray-500" size={24} />
+                                    <BiTimeFive className="text-gray-500" size={20} />
                                 </div>
 
-                                {/* Hover Play */}
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <BiPlay className="text-white drop-shadow-lg" size={32} />
+                                    <BiPlay className="text-white drop-shadow-lg" size={28} />
                                 </div>
 
                                 {/* Duration Badge */}
-                                <div className="absolute bottom-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[10px] font-bold text-white shadow-sm">
+                                <div className="absolute bottom-1 right-1 bg-black/80 px-1 py-0.5 rounded text-[9px] md:text-[10px] font-bold text-white shadow-sm">
                                     {song.duration}
                                 </div>
                             </div>
 
                             <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-                                <h3 className="text-white font-semibold text-sm line-clamp-2 leading-tight group-hover:text-purple-400 transition-colors" title={song.title}>
+                                <h3 className="text-white font-semibold text-xs md:text-sm line-clamp-2 leading-tight group-hover:text-purple-400 transition-colors" title={song.title}>
                                     {he.decode(song.title || '')}
                                 </h3>
-                                <div className="flex items-center gap-2 text-xs text-gray-400">
-                                    <span className="line-clamp-1 flex-1">
-                                        {song.artists?.map((a: any) => a.name).join(', ') || 'Various Artists'}
-                                    </span>
-                                </div>
+                                <p className="text-gray-400 text-xs line-clamp-1">
+                                    {song.artists?.map((a: any) => a.name).join(', ') || 'Various Artists'}
+                                </p>
                             </div>
 
-                            <button className="text-gray-500 hover:text-white p-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                                <BiDotsVerticalRounded size={20} />
+                            <button className="text-gray-500 hover:text-white p-1.5 md:p-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                <BiDotsVerticalRounded size={18} />
                             </button>
                         </div>
                     ))}
@@ -147,12 +136,27 @@ const LongListening = () => {
 }
 
 const SkeletonLoader = () => (
-    <div className="px-4 py-8 md:px-8">
+    <div className="py-4 md:py-8 md:px-8">
         <div className="h-4 w-40 bg-white/10 rounded mb-2 animate-pulse" />
-        <div className="h-10 w-60 bg-white/10 rounded mb-6 animate-pulse" />
-        <div className="grid grid-rows-4 grid-flow-col gap-4 overflow-hidden">
+        <div className="h-8 md:h-10 w-48 md:w-60 bg-white/10 rounded mb-4 md:mb-6 animate-pulse" />
+        {/* Mobile skeleton */}
+        <div className="md:hidden">
+            <div className="inline-grid grid-rows-4 grid-flow-col gap-1.5 -mx-4 px-4">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="flex gap-3 p-2 w-[88vw]">
+                        <div className="w-24 h-14 bg-white/5 rounded-lg animate-pulse shrink-0" />
+                        <div className="flex-1 space-y-2 py-2">
+                            <div className="h-3.5 bg-white/5 rounded w-[90%] animate-pulse" />
+                            <div className="h-3 bg-white/5 rounded w-[60%] animate-pulse" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+        {/* Desktop skeleton */}
+        <div className="hidden md:grid grid-rows-4 grid-flow-col gap-4 overflow-hidden">
             {[...Array(12)].map((_, i) => (
-                <div key={i} className="flex gap-4 w-[80vw] md:w-[320px]">
+                <div key={i} className="flex gap-4 w-[320px]">
                     <div className="w-32 h-[4.5rem] bg-white/5 rounded-lg animate-pulse shrink-0" />
                     <div className="flex-1 space-y-2 py-2">
                         <div className="h-4 bg-white/5 rounded w-[90%] animate-pulse" />

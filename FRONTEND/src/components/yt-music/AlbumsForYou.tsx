@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { BiPlay, BiAlbum } from 'react-icons/bi';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
@@ -17,12 +17,9 @@ const AlbumsForYou = () => {
 
     const loading = !hasPrefetched || (albums.length === 0 && isPrefetching);
 
-
-
     const handleScroll = (direction: 'left' | 'right') => {
         if (scrollRef.current) {
-            const scrollAmount = direction === 'left' ? -500 : 500;
-            scrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+            scrollRef.current.scrollBy({ left: direction === 'left' ? -500 : 500, behavior: 'smooth' });
         }
     };
 
@@ -42,12 +39,12 @@ const AlbumsForYou = () => {
     if (albums.length === 0) return null;
 
     return (
-        <div className="relative py-8 px-4 md:px-8 bg-gradient-to-b from-transparent to-black/20">
+        <div className="relative py-4 md:py-8 md:px-8 bg-gradient-to-b from-transparent to-black/20">
             {/* Header */}
-            <div className="flex justify-between items-end mb-6">
+            <div className="flex justify-between items-end mb-4 md:mb-6">
                 <div>
                     <span className="text-gray-400 text-xs uppercase tracking-wider font-bold block mb-1">RECOMMENDED FOR YOU</span>
-                    <h2 className="text-3xl md:text-4xl font-bold text-white">Albums for You</h2>
+                    <h2 className="text-2xl md:text-4xl font-bold text-white">Albums for You</h2>
                 </div>
                 {/* Desktop Nav */}
                 <div className="hidden md:flex gap-2">
@@ -60,82 +57,68 @@ const AlbumsForYou = () => {
                 </div>
             </div>
 
-            {/* Content */}
+            {/* Content — edge to edge on mobile */}
             <div
                 ref={scrollRef}
-                className="overflow-x-auto scrollbar-hide scroll-smooth -mx-4 px-4 md:mx-0 md:px-0"
+                className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide scroll-smooth -mx-4 px-4 md:mx-0 md:px-0"
             >
-                {/* 
-                    Using Flexbox with fixed widths ensures exact sizing control.
-                    Mobile: w-[150px] or w-[42vw] (approx 2 items).
-                    Desktop: w-[180px] (Small/Medium size).
-                */}
-                <div className="flex gap-4">
-                    {albums.map((album, idx) => (
-                        <div
-                            key={`${album.browseId}-${idx}`}
-                            onClick={() => router.push(`/album/${album.browseId}`)}
-                            className="flex-shrink-0 w-[42vw] sm:w-[160px] md:w-[180px] lg:w-[200px] group cursor-pointer flex flex-col gap-3"
-                        >
-                            {/* Card Image */}
-                            <div className="relative aspect-square rounded-lg overflow-hidden bg-zinc-800 shadow-md group-hover:shadow-purple-500/20 transition-all duration-300">
-                                {album.thumbnails?.[0]?.url ? (
-                                    <img
-                                        // Try to use last thumbnail (usually highest result)
-                                        src={album.thumbnails[album.thumbnails.length - 1].url}
-                                        alt={album.title}
-                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                        onError={handleImageError}
-                                        loading="lazy"
-                                    />
-                                ) : null}
+                {albums.map((album, idx) => (
+                    <div
+                        key={`${album.browseId}-${idx}`}
+                        onClick={() => router.push(`/album/${album.browseId}`)}
+                        className="flex-shrink-0 w-[42vw] sm:w-[160px] md:w-[180px] lg:w-[200px] group cursor-pointer flex flex-col gap-2 md:gap-3"
+                    >
+                        {/* Card Image */}
+                        <div className="relative aspect-square rounded-lg overflow-hidden bg-zinc-800 shadow-md group-hover:shadow-purple-500/20 transition-all duration-300">
+                            {album.thumbnails?.[0]?.url ? (
+                                <img
+                                    src={album.thumbnails[album.thumbnails.length - 1].url}
+                                    alt={album.title}
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                    onError={handleImageError}
+                                    loading="lazy"
+                                />
+                            ) : null}
 
-                                {/* Fallback */}
-                                <div className={`fallback-icon absolute inset-0 bg-zinc-800 flex items-center justify-center ${album.thumbnails?.[0]?.url ? 'hidden' : 'flex'}`}>
-                                    <BiAlbum className="text-gray-600" size={40} />
-                                </div>
-
-                                {/* Hover Overlay */}
-                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl">
-                                        <BiPlay className="text-black ml-1" size={30} />
-                                    </div>
-                                </div>
+                            <div className={`fallback-icon absolute inset-0 bg-zinc-800 flex items-center justify-center ${album.thumbnails?.[0]?.url ? 'hidden' : 'flex'}`}>
+                                <BiAlbum className="text-gray-600" size={40} />
                             </div>
 
-                            {/* Meta */}
-                            <div className="flex flex-col">
-                                <h3 className="text-white font-bold text-base truncate group-hover:text-purple-400 transition-colors" title={album.title}>
-                                    {he.decode(album.title || '')}
-                                </h3>
-                                <div className="flex items-center gap-1 text-sm text-gray-400 truncate">
-                                    <span className="font-medium text-gray-300">
-                                        {album.type || 'Album'}
-                                    </span>
-                                    <span>•</span>
-                                    <span className="truncate">
-                                        {album.artists?.map((a: any) => a.name).join(', ') || 'Unknown'}
-                                    </span>
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                                <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl">
+                                    <BiPlay className="text-black ml-1" size={26} />
                                 </div>
                             </div>
                         </div>
-                    ))}
-                </div>
+
+                        {/* Meta */}
+                        <div className="flex flex-col">
+                            <h3 className="text-white font-semibold text-sm md:text-base truncate group-hover:text-purple-400 transition-colors" title={album.title}>
+                                {he.decode(album.title || '')}
+                            </h3>
+                            <div className="flex items-center gap-1 text-xs md:text-sm text-gray-400 truncate">
+                                <span className="font-medium text-gray-300">{album.type || 'Album'}</span>
+                                <span>•</span>
+                                <span className="truncate">{album.artists?.map((a: any) => a.name).join(', ') || 'Unknown'}</span>
+                            </div>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
-    )
+    );
 }
 
 const SkeletonLoader = () => (
-    <div className="px-4 py-8 md:px-8">
+    <div className="py-4 md:py-8 md:px-8">
         <div className="h-4 w-40 bg-white/10 rounded mb-2 animate-pulse" />
-        <div className="h-10 w-60 bg-white/10 rounded mb-6 animate-pulse" />
-        <div className="flex gap-4 overflow-hidden">
-            {[...Array(8)].map((_, i) => (
-                <div key={i} className="min-w-[42vw] sm:min-w-[160px] md:min-w-[180px] lg:min-w-[200px] space-y-3">
+        <div className="h-8 md:h-10 w-48 md:w-60 bg-white/10 rounded mb-4 md:mb-6 animate-pulse" />
+        <div className="flex gap-3 md:gap-4 overflow-hidden -mx-4 px-4 md:mx-0 md:px-0">
+            {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-[42vw] sm:w-[160px] md:w-[180px] lg:w-[200px] space-y-2 md:space-y-3">
                     <div className="aspect-square bg-white/5 rounded-lg animate-pulse" />
-                    <div className="space-y-2">
-                        <div className="h-4 bg-white/5 rounded w-[80%] animate-pulse" />
+                    <div className="space-y-1.5">
+                        <div className="h-3.5 bg-white/5 rounded w-[80%] animate-pulse" />
                         <div className="h-3 bg-white/5 rounded w-[50%] animate-pulse" />
                     </div>
                 </div>
