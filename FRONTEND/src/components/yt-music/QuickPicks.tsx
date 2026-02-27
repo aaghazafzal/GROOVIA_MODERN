@@ -88,15 +88,15 @@ const QuickPicks = () => {
                 className="overflow-x-auto scrollbar-hide scroll-smooth -mx-4 px-4 md:mx-0 md:px-0"
             >
                 {/* 
-                  Mobile: auto-cols-[50%] — exactly like TrendingOnSocials (2 columns visible, 4 rows)
+                  Mobile: auto-cols-[92%] — 1 full column + 8% peek of next column
                   Desktop: auto-cols-[30%] — 3 columns visible + 4th peeking
                 */}
-                <div className="inline-grid grid-rows-4 grid-flow-col gap-x-2 gap-y-1 md:gap-x-6 md:gap-y-3 auto-cols-[50%] md:auto-cols-[30%] lg:auto-cols-[29%]">
+                <div className="inline-grid grid-rows-4 grid-flow-col gap-x-2 gap-y-1 md:gap-x-6 md:gap-y-3 auto-cols-[92%] md:auto-cols-[30%] lg:auto-cols-[29%]">
                     {songs.map((song, idx) => (
                         <div
                             key={`${song.videoId}-${idx}`}
                             onClick={() => handlePlay(song)}
-                            className="flex items-center gap-2.5 md:gap-4 p-2 rounded-xl hover:bg-white/5 transition-all cursor-pointer group select-none h-[68px]"
+                            className="flex items-center gap-2.5 md:gap-4 p-2 rounded-xl hover:bg-white/5 transition-all cursor-pointer group select-none h-[68px] overflow-hidden"
                         >
                             {/* Thumb */}
                             <div className="relative w-12 h-12 md:w-16 md:h-16 rounded-lg md:rounded-md overflow-hidden flex-shrink-0 bg-zinc-800 shadow-lg">
@@ -118,12 +118,12 @@ const QuickPicks = () => {
                                 </div>
                             </div>
 
-                            {/* Meta */}
-                            <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                                <h3 className="text-white font-medium md:font-semibold text-sm line-clamp-1 md:line-clamp-2 leading-snug group-hover:text-purple-400 transition-colors" title={song.title}>
+                            {/* Meta — min-w-0 ensures flex child doesn't overflow */}
+                            <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5 overflow-hidden">
+                                <h3 className="text-white font-medium md:font-semibold text-sm truncate group-hover:text-purple-400 transition-colors" title={song.title}>
                                     {he.decode(song.title || 'Unknown Track')}
                                 </h3>
-                                <p className="text-gray-400 text-xs line-clamp-1 font-medium">
+                                <p className="text-gray-400 text-xs truncate font-medium">
                                     {song.artists?.map((a: any) => a.name).join(', ') || 'Unknown Artist'}
                                 </p>
                             </div>

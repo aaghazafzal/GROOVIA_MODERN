@@ -80,15 +80,15 @@ const LongListening = () => {
             {/* Scroll container — edge to edge on mobile */}
             <div ref={scrollRef} className="overflow-x-auto scrollbar-hide scroll-smooth -mx-4 px-4 md:mx-0 md:px-0">
                 {/*
-                  Mobile: auto-cols-[88%] (1 full item visible, hint of next)
+                  Mobile: auto-cols-[90%] (1 full item + 10% peek of next)
                   Desktop: 2 full + third peeking
                 */}
-                <div className="inline-grid grid-rows-4 grid-flow-col gap-x-2 gap-y-1 md:gap-x-6 md:gap-y-3 auto-cols-[88%] md:auto-cols-[40%] lg:auto-cols-[35%]">
+                <div className="inline-grid grid-rows-4 grid-flow-col gap-x-2 gap-y-1 md:gap-x-6 md:gap-y-3 auto-cols-[90%] md:auto-cols-[40%] lg:auto-cols-[35%]">
                     {songs.map((song, idx) => (
                         <div
                             key={`${song.videoId}-${idx}`}
                             onClick={() => handlePlay(song)}
-                            className="flex items-center gap-3 md:gap-4 p-2 rounded-xl hover:bg-white/5 transition-all cursor-pointer group select-none"
+                            className="flex items-center gap-3 md:gap-4 p-2 rounded-xl hover:bg-white/5 transition-all cursor-pointer group select-none overflow-hidden"
                         >
                             {/* Landscape Thumbnail */}
                             <div className="relative w-24 h-14 md:w-32 md:h-[4.5rem] rounded-lg overflow-hidden flex-shrink-0 bg-zinc-800 shadow-md">
@@ -115,11 +115,12 @@ const LongListening = () => {
                                 </div>
                             </div>
 
-                            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-                                <h3 className="text-white font-semibold text-xs md:text-sm line-clamp-2 leading-tight group-hover:text-purple-400 transition-colors" title={song.title}>
+                            {/* Meta — min-w-0 to stop overflow */}
+                            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1 overflow-hidden">
+                                <h3 className="text-white font-semibold text-xs md:text-sm line-clamp-2 leading-snug group-hover:text-purple-400 transition-colors" title={song.title}>
                                     {he.decode(song.title || '')}
                                 </h3>
-                                <p className="text-gray-400 text-xs line-clamp-1">
+                                <p className="text-gray-400 text-xs truncate">
                                     {song.artists?.map((a: any) => a.name).join(', ') || 'Various Artists'}
                                 </p>
                             </div>
