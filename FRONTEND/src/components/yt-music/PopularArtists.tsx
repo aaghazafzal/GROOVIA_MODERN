@@ -77,8 +77,8 @@ const PopularArtists = () => {
                             onClick={() => router.push(`/artist/${artist.browseId}`)}
                             className="flex-shrink-0 flex flex-col items-center gap-2.5 md:gap-3 cursor-pointer group"
                         >
-                            {/* Circular Artist Image */}
-                            <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full overflow-hidden bg-zinc-800 flex-shrink-0 ring-2 ring-transparent group-hover:ring-purple-500/60 transition-all duration-300 group-hover:shadow-[0_0_20px_rgba(168,85,247,0.3)]">
+                            {/* Circular Artist Image — w-36 mobile / w-44 desktop */}
+                            <div className="relative w-36 h-36 md:w-44 md:h-44 rounded-full overflow-hidden bg-zinc-800 flex-shrink-0 ring-2 ring-transparent group-hover:ring-purple-500/60 transition-all duration-300 group-hover:shadow-[0_0_24px_rgba(168,85,247,0.35)]">
                                 {thumb ? (
                                     <img
                                         src={thumb}
@@ -96,12 +96,12 @@ const PopularArtists = () => {
                             </div>
 
                             {/* Artist Name */}
-                            <div className="text-center w-20 md:w-28">
-                                <p className="text-white text-xs md:text-sm font-medium leading-tight line-clamp-2 group-hover:text-purple-400 transition-colors">
+                            <div className="text-center w-36 md:w-44">
+                                <p className="text-white text-sm md:text-base font-medium leading-tight line-clamp-2 group-hover:text-purple-400 transition-colors">
                                     {he.decode(artist.name || artist.artist || 'Unknown')}
                                 </p>
                                 {artist.subscribers && (
-                                    <p className="text-gray-500 text-[10px] md:text-xs mt-0.5 truncate">{artist.subscribers}</p>
+                                    <p className="text-gray-500 text-xs md:text-sm mt-0.5 truncate">{artist.subscribers}</p>
                                 )}
                             </div>
                         </div>
@@ -120,8 +120,8 @@ const SkeletonLoader = () => (
         <div className="flex gap-4 md:gap-6 overflow-hidden -mx-4 px-4 md:mx-0 md:px-0">
             {[...Array(8)].map((_, i) => (
                 <div key={i} className="flex-shrink-0 flex flex-col items-center gap-2.5">
-                    <div className="w-20 h-20 md:w-28 md:h-28 rounded-full bg-white/5 animate-pulse" />
-                    <div className="w-16 md:w-20 h-3.5 bg-white/5 rounded animate-pulse" />
+                    <div className="w-36 h-36 md:w-44 md:h-44 rounded-full bg-white/5 animate-pulse" />
+                    <div className="w-24 md:w-32 h-4 bg-white/5 rounded animate-pulse" />
                 </div>
             ))}
         </div>
