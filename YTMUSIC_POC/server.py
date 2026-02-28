@@ -9,6 +9,8 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import time
 import yt_dlp
+import os
+import tempfile
 
 app = FastAPI()
 
@@ -48,6 +50,44 @@ def cache_set(key: str, value, ttl: int = 1800):
 
 # Initialize YTMusic (unauthenticated — public data)
 yt = YTMusic()
+
+# ────────────────────────────────────────────────────────────
+# YouTube cookies — injected via YT_COOKIES env variable
+# (Netscape cookie file format, base64 encoded)
+# This is required to bypass YouTube IP-based bot detection
+# on Render datacenter IPs.
+# ────────────────────────────────────────────────────────────
+import base64
+
+COOKIE_FILE_PATH = None
+
+yt_cookies_b64 = os.environ.get("YT_COOKIES_B64", "")
+if yt_cookies_b64:
+    try:
+        cookie_content = base64.b64decode(yt_cookies_b64).decode("utf-8")
+        tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False)
+        tmp.write(cookie_content)
+        tmp.flush()
+        tmp.close()
+        COOKIE_FILE_PATH = tmp.name
+        print(f"[cookies] Loaded YouTube cookies from env var into {COOKIE_FILE_PATH}")
+    except Exception as e:
+        print(f"[cookies] Failed to load YT_COOKIES_B64: {e}")
+else:
+    print("[cookies] No YT_COOKIES_B64 env var found. yt-dlp will run without cookies (may fail on Render).")
+
+def get_ydl_opts(extra: dict = {}) -> dict:
+    """Returns yt-dlp options, injecting cookie file if available."""
+    opts = {
+        'format': 'bestaudio[ext=m4a]/bestaudio/best',
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': False,
+    }
+    if COOKIE_FILE_PATH:
+        opts['cookiefile'] = COOKIE_FILE_PATH
+    opts.update(extra)
+    return opts
 
 @app.get("/")
 def read_root():
@@ -115,13 +155,7 @@ async def get_album(browseId: str):
 async def stream_audio(videoId: str, request: Request, response: Response, download: bool = False):
     try:
         def extract():
-            ydl_opts = {
-                'format': 'bestaudio[ext=m4a]/bestaudio/best',
-                'quiet': True,
-                'no_warnings': True,
-                'extract_flat': False
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            with yt_dlp.YoutubeDL(get_ydl_opts()) as ydl:
                 info = ydl.extract_info(f"https://www.youtube.com/watch?v={videoId}", download=False)
                 return info['url'], info.get('title', videoId)
         
