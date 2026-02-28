@@ -93,35 +93,49 @@ function PlayerContent() {
         setLoadingDetails(true);
         try {
             if (currentSong.youtubeId) {
-                // 1. Fetch Watch Playlist to get Lyrics ID
-                const watchRes = await fetch(`${YT_API_URL}/watch?videoId=${currentSong.youtubeId}`);
-                const watchData = await watchRes.json();
-                const lyricsId = watchData.data?.lyrics;
+                const ytApiUrl = YT_API_URL;
+                const artistList = currentSong.artists?.primary || [];
 
-                let lyricsText = null;
+                // Parallel: watch (for lyrics) + one artist search per artist name
+                const results = await Promise.allSettled([
+                    fetch(`${ytApiUrl}/watch?videoId=${currentSong.youtubeId}`).then(r => r.json()).catch(() => null),
+                    ...artistList.map((a: any) =>
+                        fetch(`${ytApiUrl}/search?query=${encodeURIComponent(a.name)}&filter=artists&limit=2`)
+                            .then(r => r.json()).catch(() => null)
+                    )
+                ]);
+
+                // Process watch → lyrics
+                let lyricsText: string | null = null;
+                const watchData = results[0].status === 'fulfilled' ? results[0].value : null;
+                const lyricsId = watchData?.data?.lyrics;
                 if (lyricsId) {
-                    const lyricsRes = await fetch(`${YT_API_URL}/lyrics?browseId=${lyricsId}`);
-                    const lyricsData = await lyricsRes.json();
-                    lyricsText = lyricsData.data?.lyrics;
+                    const lyricsRes = await fetch(`${ytApiUrl}/lyrics?browseId=${lyricsId}`).then(r => r.json()).catch(() => null);
+                    lyricsText = lyricsRes?.data?.lyrics || null;
                 }
+
+                // Process artist searches — pick first browseId match per artist
+                const ytArtists: any[] = artistList.map((a: any, idx: number) => {
+                    const res = results[idx + 1];
+                    if (res.status !== 'fulfilled' || !res.value) return { name: a.name, browseId: null, thumbnails: [] };
+                    const first = (res.value?.data || []).find((r: any) => r.browseId?.startsWith('UC'));
+                    return first ? { name: first.artist || first.title || a.name, browseId: first.browseId, thumbnails: first.thumbnails || [] } : { name: a.name, browseId: null, thumbnails: [] };
+                });
 
                 setFullSongDetails({
                     id: currentSong.id,
                     artists: currentSong.artists,
+                    ytArtists, // ← enriched with channelId + thumbnails
                     album: currentSong.album,
                     lyrics: lyricsText,
                     hasLyrics: !!lyricsText,
-                    image: currentSong.image // Ensure image availability
+                    image: currentSong.image,
                 });
 
             } else {
-                // Fetch Song Details (Saavn)
                 const songRes = await api.get(`/songs/${currentSong.id}`);
-                if (songRes.data?.data?.[0]) {
-                    setFullSongDetails(songRes.data.data[0]);
-                }
+                if (songRes.data?.data?.[0]) setFullSongDetails(songRes.data.data[0]);
             }
-
         } catch (error) {
             console.error('Error fetching details:', error);
         } finally {
@@ -247,32 +261,67 @@ function PlayerContent() {
 
     const fetchRelatedSongs = async () => {
         if (!currentSong?.id) return;
-
         try {
             setLoadingRelated(true);
-
             if (currentSong.youtubeId) {
+                // Primary: watch playlist tracks
                 const response = await fetch(`${YT_API_URL}/watch?videoId=${currentSong.youtubeId}`);
                 const data = await response.json();
-                const tracks = data.data?.tracks || [];
+                let tracks = data.data?.tracks || [];
+
+                // Fallback: if watch returned empty, search by artist name
+                if (tracks.length === 0) {
+                    const artistName = currentSong.artists?.primary?.[0]?.name || '';
+                    const songName = currentSong.name || '';
+                    const query = encodeURIComponent(artistName ? `${artistName} songs` : songName);
+                    const fallbackRes = await fetch(`${YT_API_URL}/search?query=${query}&filter=songs&limit=15`);
+                    const fallbackData = await fallbackRes.json();
+                    const fallback = (fallbackData?.data || []).filter((t: any) => t.videoId && t.videoId !== currentSong.youtubeId);
+                    const mapped = fallback.map((t: any) => ({
+                        id: t.videoId,
+                        name: t.title,
+                        type: 'youtube',
+                        artists: { primary: (t.artists || []).map((a: any) => ({ name: typeof a === 'string' ? a : a.name })) },
+                        image: (t.thumbnails || []).sort((a: any, b: any) => (b.width || 0) - (a.width || 0)).map((th: any) => ({ quality: 'high', url: th.url })),
+                        youtubeId: t.videoId,
+                    }));
+                    setRelatedSongs(mapped);
+                    return;
+                }
+
                 const mappedSongs = tracks.map((t: any) => ({
                     id: t.videoId,
                     name: t.title,
-                    type: 'youtube', // distinctive
+                    type: 'youtube',
                     artists: { primary: t.artists ? t.artists.map((a: any) => ({ name: a.name })) : [{ name: 'Unknown' }] },
-                    image: t.thumbnail ? t.thumbnail.sort((a: any, b: any) => a.width - b.width).map((thumb: any) => ({ quality: 'high', url: thumb.url })) : [],
-                    youtubeId: t.videoId
+                    image: t.thumbnail ? t.thumbnail.sort((a: any, b: any) => (b.width || 0) - (a.width || 0)).map((thumb: any) => ({ quality: 'high', url: thumb.url })) : [],
+                    youtubeId: t.videoId,
                 }));
                 setRelatedSongs(mappedSongs);
             } else {
-                const response = await api.get(`/songs/${currentSong.id}/suggestions`, {
-                    params: { limit: 20 }
-                });
+                const response = await api.get(`/songs/${currentSong.id}/suggestions`, { params: { limit: 20 } });
                 setRelatedSongs(response.data?.data || []);
             }
         } catch (error) {
             console.error('Error fetching related songs:', error);
-            setRelatedSongs([]);
+            // Even on error, try fallback search for YT songs
+            if (currentSong?.youtubeId) {
+                try {
+                    const artistName = currentSong.artists?.primary?.[0]?.name || '';
+                    const q = encodeURIComponent(artistName ? `${artistName} songs` : currentSong.name);
+                    const res = await fetch(`${YT_API_URL}/search?query=${q}&filter=songs&limit=10`);
+                    const json = await res.json();
+                    const songs = (json?.data || []).filter((t: any) => t.videoId !== currentSong.youtubeId).map((t: any) => ({
+                        id: t.videoId, name: t.title, type: 'youtube',
+                        artists: { primary: (t.artists || []).map((a: any) => ({ name: typeof a === 'string' ? a : a.name })) },
+                        image: (t.thumbnails || []).sort((a: any, b: any) => (b.width || 0) - (a.width || 0)).map((th: any) => ({ quality: 'high', url: th.url })),
+                        youtubeId: t.videoId,
+                    }));
+                    setRelatedSongs(songs);
+                } catch (_) { setRelatedSongs([]); }
+            } else {
+                setRelatedSongs([]);
+            }
         } finally {
             setLoadingRelated(false);
         }
@@ -883,9 +932,64 @@ function PlayerContent() {
                                 <div className="text-center py-12">
                                     <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
                                 </div>
-                            ) : fullSongDetails ? (
+                            ) : currentSong?.youtubeId && fullSongDetails ? (
                                 <>
-                                    {/* Artists */}
+                                    {/* Artists (YT) */}
+                                    {fullSongDetails.ytArtists?.length > 0 && (
+                                        <div>
+                                            <h3 className="text-lg font-bold text-white mb-3">Artists</h3>
+                                            <div className="flex overflow-x-auto scrollbar-hide gap-3 -mx-4 px-4 snap-x">
+                                                {fullSongDetails.ytArtists.map((artist: any, idx: number) => (
+                                                    artist.browseId ? (
+                                                        <a key={idx} href={`/artist/${artist.browseId}`} className="flex-shrink-0 w-[45%] snap-start group">
+                                                            <div className="relative w-full aspect-square rounded-full overflow-hidden mb-2 bg-zinc-800">
+                                                                {artist.thumbnails?.length > 0 ? (
+                                                                    <img src={artist.thumbnails.sort((a: any, b: any) => (b.width || 0) - (a.width || 0))[0]?.url} alt={artist.name} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <div className="w-full h-full bg-gradient-to-br from-purple-900/60 to-zinc-800 flex items-center justify-center">
+                                                                        <span className="text-2xl font-black text-purple-300 uppercase">{(artist.name || '?')[0]}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-white text-sm font-medium text-center line-clamp-1 group-hover:underline">{artist.name}</p>
+                                                            <p className="text-gray-400 text-xs text-center">Artist</p>
+                                                        </a>
+                                                    ) : (
+                                                        <div key={idx} className="flex-shrink-0 w-[45%] snap-start">
+                                                            <div className="w-full aspect-square rounded-full bg-gradient-to-br from-purple-900/40 to-zinc-800 flex items-center justify-center mb-2">
+                                                                <span className="text-2xl font-black text-purple-300 uppercase">{(artist.name || '?')[0]}</span>
+                                                            </div>
+                                                            <p className="text-white text-sm font-medium text-center line-clamp-1">{artist.name}</p>
+                                                            <p className="text-gray-400 text-xs text-center">Artist</p>
+                                                        </div>
+                                                    )
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {/* From Album (YT - no link) */}
+                                    {fullSongDetails.album?.name && (
+                                        <div>
+                                            <h3 className="text-lg font-bold text-white mb-3">From Album</h3>
+                                            <div className="block w-[45%]">
+                                                <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-2 bg-zinc-800">
+                                                    <img src={getImageUrl(fullSongDetails.image) || ''} alt={fullSongDetails.album.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                                </div>
+                                                <p className="text-white text-sm font-bold line-clamp-1">{fullSongDetails.album.name}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {/* Lyrics (YT) */}
+                                    {fullSongDetails.lyrics && (
+                                        <div>
+                                            <h3 className="text-lg font-bold text-white mb-3">Lyrics</h3>
+                                            <p className="text-gray-300 whitespace-pre-line leading-relaxed text-sm bg-white/5 p-4 rounded-xl border border-white/5">{fullSongDetails.lyrics}</p>
+                                        </div>
+                                    )}
+                                </>
+                            ) : !currentSong?.youtubeId && fullSongDetails ? (
+                                <>
+                                    {/* Artists (Saavn) */}
                                     <div>
                                         <h3 className="text-lg font-bold text-white mb-3">Artists</h3>
                                         <div className="flex overflow-x-auto scrollbar-hide gap-3 -mx-4 px-4 snap-x">
@@ -900,8 +1004,6 @@ function PlayerContent() {
                                             ))}
                                         </div>
                                     </div>
-
-                                    {/* Starring */}
                                     {starringList.length > 0 && (
                                         <div>
                                             <h3 className="text-lg font-bold text-white mb-3">Starring</h3>
@@ -918,8 +1020,6 @@ function PlayerContent() {
                                             </div>
                                         </div>
                                     )}
-
-                                    {/* Album */}
                                     {fullSongDetails.album && (
                                         <div>
                                             <h3 className="text-lg font-bold text-white mb-3">From Album</h3>
@@ -931,12 +1031,11 @@ function PlayerContent() {
                                             </Link>
                                         </div>
                                     )}
-
-                                    {/* Playlists - Removed as requested */}
                                 </>
                             ) : null}
                         </div>
                     )}
+
                 </div>
             </div>
 
@@ -1134,9 +1233,75 @@ function PlayerContent() {
                                         <div className="text-center py-12">
                                             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
                                         </div>
-                                    ) : fullSongDetails ? (
+                                    ) : currentSong?.youtubeId && fullSongDetails ? (
+
                                         <>
                                             {/* Lyrics */}
+                                            {fullSongDetails.lyrics && (
+                                                <div>
+                                                    <h3 className="text-2xl font-bold text-white mb-4">Lyrics</h3>
+                                                    <p className="text-gray-300 whitespace-pre-line leading-relaxed text-lg bg-white/5 p-6 rounded-2xl border border-white/5">
+                                                        {fullSongDetails.lyrics}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {/* Artists (YT Desktop) */}
+                                            {fullSongDetails.ytArtists?.length > 0 && (
+                                                <div>
+                                                    <h3 className="text-2xl font-bold text-white mb-4">Artists</h3>
+                                                    <div className="relative group/carousel">
+                                                        <button onClick={() => scrollCarousel(artistsScrollRef, 'left')} className="hidden md:flex absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-black/80 border border-white/10 items-center justify-center rounded-full opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-black">
+                                                            <IoChevronBack size={24} className="text-white" />
+                                                        </button>
+                                                        <button onClick={() => scrollCarousel(artistsScrollRef, 'right')} className="hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-black/80 border border-white/10 items-center justify-center rounded-full opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-black">
+                                                            <IoChevronForward size={24} className="text-white" />
+                                                        </button>
+                                                        <div ref={artistsScrollRef} className="flex overflow-x-auto scrollbar-hide gap-6 scroll-smooth">
+                                                            {fullSongDetails.ytArtists.map((artist: any, idx: number) => (
+                                                                artist.browseId ? (
+                                                                    <a key={idx} href={`/artist/${artist.browseId}`} className="flex-shrink-0 w-[140px] group text-center">
+                                                                        <div className="relative w-full aspect-square rounded-full overflow-hidden mb-3 bg-zinc-800 shadow-lg group-hover:scale-105 transition-transform">
+                                                                            {artist.thumbnails?.length > 0 ? (
+                                                                                <img src={artist.thumbnails.sort((a: any, b: any) => (b.width || 0) - (a.width || 0))[0]?.url} alt={artist.name} className="w-full h-full object-cover" />
+                                                                            ) : (
+                                                                                <div className="w-full h-full bg-gradient-to-br from-purple-900/60 to-zinc-800 flex items-center justify-center">
+                                                                                    <span className="text-3xl font-black text-purple-300 uppercase">{(artist.name || '?')[0]}</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <p className="text-white text-base font-bold line-clamp-1 group-hover:text-primary transition-colors">{artist.name}</p>
+                                                                        <p className="text-gray-400 text-sm">Artist</p>
+                                                                    </a>
+                                                                ) : (
+                                                                    <div key={idx} className="flex-shrink-0 w-[140px] text-center">
+                                                                        <div className="w-full aspect-square rounded-full bg-gradient-to-br from-purple-900/40 to-zinc-800 flex items-center justify-center mb-3 shadow-lg">
+                                                                            <span className="text-3xl font-black text-purple-300 uppercase">{(artist.name || '?')[0]}</span>
+                                                                        </div>
+                                                                        <p className="text-white text-base font-bold line-clamp-1">{artist.name}</p>
+                                                                        <p className="text-gray-400 text-sm">Artist</p>
+                                                                    </div>
+                                                                )
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {/* Album (YT Desktop - no link) */}
+                                            {fullSongDetails.album?.name && (
+                                                <div>
+                                                    <h3 className="text-2xl font-bold text-white mb-4">From Album</h3>
+                                                    <div className="block w-[180px]">
+                                                        <div className="relative w-full aspect-square rounded-2xl overflow-hidden mb-3 bg-zinc-800 shadow-lg">
+                                                            <img src={getImageUrl(fullSongDetails.image) || ''} alt={fullSongDetails.album.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                                        </div>
+                                                        <p className="text-white text-lg font-bold line-clamp-1">{fullSongDetails.album.name}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : !currentSong?.youtubeId && fullSongDetails ? (
+                                        <>
+                                            {/* Lyrics (Saavn) */}
                                             {(fullSongDetails.lyrics || fullSongDetails.hasLyrics === 'true') && (
                                                 <div>
                                                     <h3 className="text-2xl font-bold text-white mb-4">Lyrics</h3>
@@ -1145,8 +1310,7 @@ function PlayerContent() {
                                                     </p>
                                                 </div>
                                             )}
-
-                                            {/* Artists (Desktop) */}
+                                            {/* Artists (Saavn Desktop) */}
                                             <div>
                                                 <h3 className="text-2xl font-bold text-white mb-4">Artists</h3>
                                                 <div className="relative group/carousel">
@@ -1156,7 +1320,6 @@ function PlayerContent() {
                                                     <button onClick={() => scrollCarousel(artistsScrollRef, 'right')} className="hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-black/80 border border-white/10 items-center justify-center rounded-full opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-black">
                                                         <IoChevronForward size={24} className="text-white" />
                                                     </button>
-
                                                     <div ref={artistsScrollRef} className="flex overflow-x-auto scrollbar-hide gap-6 scroll-smooth">
                                                         {musiciansList.map((artist: any) => (
                                                             <Link key={artist.id} href={`/artist/${artist.id}`} className="flex-shrink-0 w-[140px] group text-center">
@@ -1170,8 +1333,6 @@ function PlayerContent() {
                                                     </div>
                                                 </div>
                                             </div>
-
-                                            {/* Starring (Desktop) */}
                                             {starringList.length > 0 && (
                                                 <div>
                                                     <h3 className="text-2xl font-bold text-white mb-4">Starring</h3>
@@ -1182,7 +1343,6 @@ function PlayerContent() {
                                                         <button onClick={() => scrollCarousel(starringScrollRef, 'right')} className="hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-black/80 border border-white/10 items-center justify-center rounded-full opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-black">
                                                             <IoChevronForward size={24} className="text-white" />
                                                         </button>
-
                                                         <div ref={starringScrollRef} className="flex overflow-x-auto scrollbar-hide gap-6 scroll-smooth">
                                                             {starringList.map((artist: any) => (
                                                                 <div key={artist.id} className="flex-shrink-0 w-[140px] text-center">
@@ -1197,8 +1357,6 @@ function PlayerContent() {
                                                     </div>
                                                 </div>
                                             )}
-
-                                            {/* Album (Desktop) */}
                                             {fullSongDetails.album && (
                                                 <div>
                                                     <h3 className="text-2xl font-bold text-white mb-4">From Album</h3>
@@ -1210,8 +1368,6 @@ function PlayerContent() {
                                                     </Link>
                                                 </div>
                                             )}
-
-                                            {/* Playlists - Removed as requested */}
                                         </>
                                     ) : null}
                                 </div>

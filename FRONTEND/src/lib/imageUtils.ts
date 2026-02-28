@@ -1,52 +1,41 @@
 export const getImageUrl = (image: any, quality: 'low' | 'medium' | 'high' | '500x500' = 'high'): string | null => {
     if (!image) return null;
-
-    // Map 500x500 to high
     if (quality === '500x500') quality = 'high';
 
-    // Helper to extract URL from image item (handles both 'url' and 'link' properties)
     const extractUrl = (item: any): string | null => {
         if (!item) return null;
         if (typeof item === 'string') return item;
         return item.url || item.link || item.src || null;
     };
 
-    // Handle string case (legacy data or simple URLs)
     if (typeof image === 'string') {
-        if (quality === 'high') {
-            return image.replace('50x50', '500x500').replace('150x150', '500x500');
-        }
-        if (quality === 'medium') {
-            return image.replace('50x50', '150x150').replace('500x500', '150x150');
-        }
+        if (quality === 'high') return image.replace('50x50', '500x500').replace('150x150', '500x500');
+        if (quality === 'medium') return image.replace('50x50', '150x150').replace('500x500', '150x150');
         return image;
     }
 
-    // Handle array case (standard API response)
     if (Array.isArray(image)) {
         if (image.length === 0) return null;
 
-        // Saavn usually provides sorted sizes: 50x50, 150x150, 500x500
-        // Try to extract URLs handling both 'url' and 'link' property names
+        // ── Detect YT Music format ────────────────────────────────────────────
+        // mapYTSong marks all thumbnails as quality:'high' and sorts DESCENDING (largest first)
+        // Saavn has quality:'50x50','150x150','500x500' sorted ASCENDING (smallest first)
+        const isYTFormat = image.length > 0 && image.every((item: any) => item?.quality === 'high');
 
-        if (quality === 'low') {
-            // Use lowest quality (50x50), adequate for very small icons
-            return extractUrl(image[0]) || extractUrl(image[1]) || extractUrl(image[image.length - 1]);
+        if (isYTFormat) {
+            // YT: image[0] = largest (highest quality), image[last] = smallest
+            if (quality === 'low') return extractUrl(image[image.length - 1]) || extractUrl(image[0]);
+            if (quality === 'medium') return extractUrl(image[Math.max(0, Math.floor(image.length / 2))]) || extractUrl(image[0]);
+            return extractUrl(image[0]); // High quality — first = largest
         }
 
-        if (quality === 'medium') {
-            // Use medium quality (150x150), perfect for list items and cards
-            return extractUrl(image[1]) || extractUrl(image[0]) || extractUrl(image[image.length - 1]);
-        }
-
-        // High quality (default) - Aim for index 2 (500x500) or highest available
-        return extractUrl(image[image.length - 1]) || extractUrl(image[2]) || extractUrl(image[1]) || extractUrl(image[0]);
+        // ── Saavn format: [50x50, 150x150, 500x500] ──────────────────────────
+        if (quality === 'low') return extractUrl(image[0]) || extractUrl(image[1]) || extractUrl(image[image.length - 1]);
+        if (quality === 'medium') return extractUrl(image[1]) || extractUrl(image[0]) || extractUrl(image[image.length - 1]);
+        // High: try [2] (500x500 for Saavn), then last, then first
+        return extractUrl(image[2]) || extractUrl(image[image.length - 1]) || extractUrl(image[1]) || extractUrl(image[0]);
     }
 
-    // Handle single object case
-    if (typeof image === 'object') {
-        return extractUrl(image);
-    }
-
+    if (typeof image === 'object') return extractUrl(image);
     return null;
 };
