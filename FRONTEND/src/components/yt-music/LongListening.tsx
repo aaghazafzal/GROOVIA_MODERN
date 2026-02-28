@@ -58,7 +58,7 @@ const LongListening = () => {
     if (songs.length === 0) return null;
 
     return (
-        <div className="relative py-4 md:py-8 md:px-8">
+        <div className="relative py-4 md:py-8">
             {/* Header */}
             <div className="flex justify-between items-end mb-3 md:mb-6">
                 <div>

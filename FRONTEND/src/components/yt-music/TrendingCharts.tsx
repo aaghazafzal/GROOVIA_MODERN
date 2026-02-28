@@ -48,7 +48,7 @@ const TrendingCharts = () => {
     if (songs.length === 0) return null;
 
     return (
-        <div className="relative py-3 md:py-6 md:px-8">
+        <div className="relative py-3 md:py-6">
             {/* Header — same style as QuickPicks */}
             <div className="flex justify-between items-end mb-3 md:mb-6">
                 <div className="flex flex-col gap-0.5">
@@ -87,9 +87,9 @@ const TrendingCharts = () => {
                                 onClick={() => handlePlay(song)}
                                 className="flex items-center gap-2.5 md:gap-3 p-2 rounded-xl hover:bg-white/5 transition-all cursor-pointer group select-none h-[68px] overflow-hidden"
                             >
-                                {/* Rank number */}
-                                <div className="w-6 flex-shrink-0 text-right">
-                                    <span className={`font-bold tabular-nums text-sm ${isTop3 ? 'text-purple-400' : 'text-gray-600'} group-hover:text-purple-400 transition-colors`}>
+                                {/* Rank number — tight, no fixed wide width */}
+                                <div className="w-5 flex-shrink-0 text-right">
+                                    <span className={`font-bold tabular-nums text-xs ${isTop3 ? 'text-purple-400' : 'text-gray-600'} group-hover:text-purple-400 transition-colors`}>
                                         {rank}
                                     </span>
                                 </div>

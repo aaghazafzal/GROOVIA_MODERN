@@ -61,7 +61,7 @@ const QuickPicks = () => {
     if (songs.length === 0) return null;
 
     return (
-        <div className="relative py-3 md:py-6 md:px-8">
+        <div className="relative py-3 md:py-6">
             {/* Header */}
             <div className="flex justify-between items-end mb-3 md:mb-6">
                 <div className="flex flex-col gap-0.5">
