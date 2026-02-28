@@ -26,7 +26,7 @@ import {
 import { HiOutlineHeart, HiHeart } from 'react-icons/hi';
 import { IoShareOutline, IoChevronBack, IoChevronForward, IoLogoWhatsapp, IoLogoFacebook, IoLogoTwitter, IoCopyOutline, IoClose } from 'react-icons/io5';
 import SongImage from '@/components/ui/SongImage';
-import { getImageUrl } from '@/lib/imageUtils';
+import { getImageUrl, upgradeYTThumb } from '@/lib/imageUtils';
 import { YT_API_URL } from '@/lib/config';
 
 function PlayerContent() {
@@ -966,10 +966,10 @@ function PlayerContent() {
                                             <div className="flex overflow-x-auto scrollbar-hide gap-3 -mx-4 px-4 snap-x">
                                                 {fullSongDetails.ytArtists.map((artist: any, idx: number) => (
                                                     artist.browseId ? (
-                                                        <a key={idx} href={`/artist/${artist.browseId}`} className="flex-shrink-0 w-[45%] snap-start group">
+                                                        <Link key={idx} href={`/artist/${artist.browseId}`} className="flex-shrink-0 w-[45%] snap-start group">
                                                             <div className="relative w-full aspect-square rounded-full overflow-hidden mb-2 bg-zinc-800">
                                                                 {artist.thumbnails?.length > 0 ? (
-                                                                    <img src={artist.thumbnails.sort((a: any, b: any) => (b.width || 0) - (a.width || 0))[0]?.url} alt={artist.name} className="w-full h-full object-cover" />
+                                                                    <img src={upgradeYTThumb(artist.thumbnails.sort((a: any, b: any) => (b.width || 0) - (a.width || 0))[0]?.url)} alt={artist.name} className="w-full h-full object-cover" />
                                                                 ) : (
                                                                     <div className="w-full h-full bg-gradient-to-br from-purple-900/60 to-zinc-800 flex items-center justify-center">
                                                                         <span className="text-2xl font-black text-purple-300 uppercase">{(artist.name || '?')[0]}</span>
@@ -978,7 +978,7 @@ function PlayerContent() {
                                                             </div>
                                                             <p className="text-white text-sm font-medium text-center line-clamp-1 group-hover:underline">{artist.name}</p>
                                                             <p className="text-gray-400 text-xs text-center">Artist</p>
-                                                        </a>
+                                                        </Link>
                                                     ) : (
                                                         <div key={idx} className="flex-shrink-0 w-[45%] snap-start">
                                                             <div className="w-full aspect-square rounded-full bg-gradient-to-br from-purple-900/40 to-zinc-800 flex items-center justify-center mb-2">
@@ -1284,10 +1284,10 @@ function PlayerContent() {
                                                         <div ref={artistsScrollRef} className="flex overflow-x-auto scrollbar-hide gap-6 scroll-smooth">
                                                             {fullSongDetails.ytArtists.map((artist: any, idx: number) => (
                                                                 artist.browseId ? (
-                                                                    <a key={idx} href={`/artist/${artist.browseId}`} className="flex-shrink-0 w-[140px] group text-center">
+                                                                    <Link key={idx} href={`/artist/${artist.browseId}`} className="flex-shrink-0 w-[140px] group text-center">
                                                                         <div className="relative w-full aspect-square rounded-full overflow-hidden mb-3 bg-zinc-800 shadow-lg group-hover:scale-105 transition-transform">
                                                                             {artist.thumbnails?.length > 0 ? (
-                                                                                <img src={artist.thumbnails.sort((a: any, b: any) => (b.width || 0) - (a.width || 0))[0]?.url} alt={artist.name} className="w-full h-full object-cover" />
+                                                                                <img src={upgradeYTThumb(artist.thumbnails.sort((a: any, b: any) => (b.width || 0) - (a.width || 0))[0]?.url)} alt={artist.name} className="w-full h-full object-cover" />
                                                                             ) : (
                                                                                 <div className="w-full h-full bg-gradient-to-br from-purple-900/60 to-zinc-800 flex items-center justify-center">
                                                                                     <span className="text-3xl font-black text-purple-300 uppercase">{(artist.name || '?')[0]}</span>
@@ -1296,7 +1296,7 @@ function PlayerContent() {
                                                                         </div>
                                                                         <p className="text-white text-base font-bold line-clamp-1 group-hover:text-primary transition-colors">{artist.name}</p>
                                                                         <p className="text-gray-400 text-sm">Artist</p>
-                                                                    </a>
+                                                                    </Link>
                                                                 ) : (
                                                                     <div key={idx} className="flex-shrink-0 w-[140px] text-center">
                                                                         <div className="w-full aspect-square rounded-full bg-gradient-to-br from-purple-900/40 to-zinc-800 flex items-center justify-center mb-3 shadow-lg">

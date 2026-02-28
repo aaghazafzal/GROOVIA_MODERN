@@ -1,13 +1,19 @@
 // ── Upgrade YouTube thumbnail to highest available quality ────────────────────
-const upgradeYTThumb = (url: string): string => {
+export const upgradeYTThumb = (url: string): string => {
     if (!url) return url;
-    // i.ytimg.com pattern: https://i.ytimg.com/vi/VIDEO_ID/hqdefault.jpg
+
+    // 1) i.ytimg.com pattern: https://i.ytimg.com/vi/VIDEO_ID/hqdefault.jpg
     if (url.includes('i.ytimg.com/vi/')) {
         // Try maxresdefault (1280x720) first — best quality
         return url.replace(/\/(default|mqdefault|hqdefault|sddefault|maxresdefault)(\.[^?]*)/, '/maxresdefault$2');
     }
-    // lh3.googleusercontent.com (YT Music artist thumbnails) — append size param
-    // These already serve high res, no change needed
+
+    // 2) lh3.googleusercontent.com pattern: ...=w60-h60-l90-rj
+    // The API often returns very small dimensions here. Upscale to 1080x1080
+    if (url.includes('lh3.googleusercontent.com') && url.includes('=')) {
+        return url.replace(/=w\d+-h\d+/, '=w1080-h1080'); // Upgrade to high resolution
+    }
+
     return url;
 };
 
