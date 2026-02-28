@@ -8,9 +8,9 @@ import subprocess
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import time
-import yt_dlp
-import os
-import tempfile
+from concurrent.futures import ThreadPoolExecutor
+import time
+from pytubefix import YouTube
 
 app = FastAPI()
 
@@ -51,64 +51,6 @@ def cache_set(key: str, value, ttl: int = 1800):
 # Initialize YTMusic (unauthenticated — public data)
 yt = YTMusic()
 
-# ────────────────────────────────────────────────────────────
-# YouTube cookies — injected via YT_COOKIES env variable
-# (Netscape cookie file format, base64 encoded)
-# This is required to bypass YouTube IP-based bot detection
-# on Render datacenter IPs.
-# ────────────────────────────────────────────────────────────
-import base64
-
-COOKIE_FILE_PATH = None
-
-yt_cookies_b64 = os.environ.get("YT_COOKIES_B64", "")
-if yt_cookies_b64:
-    try:
-        cookie_raw = base64.b64decode(yt_cookies_b64).decode("utf-8")
-        # Filter out authentication cookies!
-        # If we use a logged-in cookie on a datacenter IP, YouTube often serves
-        # DRM-restricted formats or blocks the request ("Format not available").
-        # Clean, anonymous session cookies (VISITOR_INFO1_LIVE, CONSISTENCY) 
-        # are enough to bypass 403 Bot Protection.
-        auth_keys = ['LOGIN_INFO', 'SID', 'HSID', 'SSID', 'APISID', 'SAPISID']
-        lines = cookie_raw.split('\n')
-        clean_lines = [l for l in lines if not any(k in l for k in auth_keys)]
-        cookie_content = '\n'.join(clean_lines)
-        
-        tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False)
-        tmp.write(cookie_content)
-        tmp.flush()
-        tmp.close()
-        COOKIE_FILE_PATH = tmp.name
-        print(f"[cookies] Loaded ANONYMIZED YouTube cookies from env var into {COOKIE_FILE_PATH}")
-    except Exception as e:
-        print(f"[cookies] Failed to load YT_COOKIES_B64: {e}")
-else:
-    print("[cookies] No YT_COOKIES_B64 env var found. yt-dlp will run without cookies (may fail on Render).")
-
-def get_ydl_opts(extra: dict = {}) -> dict:
-    """Returns yt-dlp options using tv_embedded client which bypasses all bot checks on datacenter IPs."""
-    opts = {
-        'format': 'bestaudio/best',
-        'quiet': True,
-        'no_warnings': True,
-        'extract_flat': False,
-        # tv_embedded = YouTube's Smart TV embedded player client
-        # - No bot detection / CAPTCHA / Sign-in required
-        # - Works from datacenter IPs (Render, AWS, etc.)
-        # - No PO token or cookies needed
-        # - Tested: all songs return ext=webm acodec=opus cleanly
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['tv_embedded']
-            }
-        }
-    }
-    # cookies still passed for additional auth if available (won't hurt)
-    if COOKIE_FILE_PATH:
-        opts['cookiefile'] = COOKIE_FILE_PATH
-    opts.update(extra)
-    return opts
 
 @app.get("/")
 def read_root():
@@ -176,14 +118,12 @@ async def get_album(browseId: str):
 async def stream_audio(videoId: str, request: Request, response: Response, download: bool = False):
     try:
         def extract():
-            with yt_dlp.YoutubeDL(get_ydl_opts()) as ydl:
-                info = ydl.extract_info(f"https://www.youtube.com/watch?v={videoId}", download=False)
-                # Get the actual selected format's url and ext
-                url = info['url']
-                title = info.get('title', videoId)
-                ext = info.get('ext', 'm4a')
-                acodec = info.get('acodec', '')
-                return url, title, ext, acodec
+            yt_vid = YouTube(f"https://www.youtube.com/watch?v={videoId}", client='WEB')
+            audio = yt_vid.streams.get_audio_only()
+            # extract extension from mime_type (e.g., audio/mp4 -> mp4)
+            mime_type = getattr(audio, 'mime_type', 'audio/mp4')
+            ext = mime_type.split('/')[-1] if '/' in mime_type else 'm4a'
+            return audio.url, yt_vid.title, ext, mime_type
         
         loop = asyncio.get_event_loop()
         url, title, ext, acodec = await loop.run_in_executor(executor, extract)
@@ -204,15 +144,8 @@ async def stream_audio(videoId: str, request: Request, response: Response, downl
 
         r = await loop.run_in_executor(executor, proxy_stream)
 
-        # Build content-type from ext
-        ct_map = {
-            'm4a': 'audio/mp4',
-            'webm': 'audio/webm',
-            'mp3': 'audio/mpeg',
-            'ogg': 'audio/ogg',
-            'opus': 'audio/ogg; codecs=opus',
-        }
-        content_type = ct_map.get(ext, r.headers.get('Content-Type', 'audio/mp4'))
+        # pytubefix returns the pre-assigned mime_type directly, e.g. 'audio/mp4'
+        content_type = acodec if acodec.startswith('audio') else r.headers.get('Content-Type', 'audio/mp4')
 
         # Pass along important headers
         resp_headers = {'Content-Type': content_type}
