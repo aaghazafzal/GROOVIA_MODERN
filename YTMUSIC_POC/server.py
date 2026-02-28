@@ -77,17 +77,24 @@ else:
     print("[cookies] No YT_COOKIES_B64 env var found. yt-dlp will run without cookies (may fail on Render).")
 
 def get_ydl_opts(extra: dict = {}) -> dict:
-    """Returns yt-dlp options, injecting cookie file if available."""
+    """Returns yt-dlp options using tv_embedded client which bypasses all bot checks on datacenter IPs."""
     opts = {
-        # Most permissive format chain:
-        # 1. bestaudio (any audio-only, any container)
-        # 2. best (best combined video+audio — browser <audio> extracts audio)
-        # NO ext= restriction — avoids "format not available" for songs that only have combined streams
         'format': 'bestaudio/best',
         'quiet': True,
         'no_warnings': True,
         'extract_flat': False,
+        # tv_embedded = YouTube's Smart TV embedded player client
+        # - No bot detection / CAPTCHA / Sign-in required
+        # - Works from datacenter IPs (Render, AWS, etc.)
+        # - No PO token or cookies needed
+        # - Tested: all songs return ext=webm acodec=opus cleanly
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['tv_embedded']
+            }
+        }
     }
+    # cookies still passed for additional auth if available (won't hurt)
     if COOKIE_FILE_PATH:
         opts['cookiefile'] = COOKIE_FILE_PATH
     opts.update(extra)
