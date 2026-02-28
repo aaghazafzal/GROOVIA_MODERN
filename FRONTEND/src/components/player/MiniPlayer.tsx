@@ -38,6 +38,7 @@ const MiniPlayer = () => {
 
     // Refs
     const audioRef = useRef<HTMLAudioElement>(null);
+    const silentAudioRef = useRef<HTMLAudioElement>(null);
     const playerRef = useRef<any>(null); // ReactPlayer v3 ref (HTMLMediaElement-like)
 
     const currentSong = useMusicStore((state) => state.currentSong);
@@ -148,6 +149,17 @@ const MiniPlayer = () => {
         }
     }, [isPlayingStore, audioUrl, isYoutube, error]);
 
+    // Force Wake Lock for YouTube iframe (Silent Audio Hack)
+    useEffect(() => {
+        if (isYoutube && silentAudioRef.current) {
+            if (isPlayingStore) {
+                silentAudioRef.current.play().catch(() => { });
+            } else {
+                silentAudioRef.current.pause();
+            }
+        }
+    }, [isPlayingStore, isYoutube]);
+
     const togglePlay = () => {
         const store = useMusicStore.getState();
         if (store.isPlaying) store.pauseSong();
@@ -160,6 +172,41 @@ const MiniPlayer = () => {
         const seconds = Math.floor(time % 60);
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     };
+
+    // Media Session API for Hardware Keys & Notification Bar
+    useEffect(() => {
+        if ('mediaSession' in navigator && currentSong) {
+            navigator.mediaSession.metadata = new window.MediaMetadata({
+                title: he.decode(currentSong.name || 'Unknown Song'),
+                artist: currentSong.artists?.primary?.map((a: any) => a.name).join(', ') || 'Unknown Artist',
+                album: typeof currentSong.album === 'string' ? currentSong.album : (currentSong.album?.name || 'Groovia'),
+                artwork: [
+                    { src: getSafeImageUrl(currentSong.image, 'low') || '', sizes: '96x96', type: 'image/jpeg' },
+                    { src: getSafeImageUrl(currentSong.image, 'medium') || '', sizes: '256x256', type: 'image/jpeg' },
+                    { src: getSafeImageUrl(currentSong.image, 'high') || '', sizes: '512x512', type: 'image/jpeg' }
+                ].filter(a => a.src)
+            });
+
+            navigator.mediaSession.setActionHandler('play', () => {
+                useMusicStore.getState().resumeSong();
+            });
+            navigator.mediaSession.setActionHandler('pause', () => {
+                useMusicStore.getState().pauseSong();
+            });
+            navigator.mediaSession.setActionHandler('previoustrack', () => {
+                useMusicStore.getState().playPrevious();
+            });
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+                useMusicStore.getState().playNext(false);
+            });
+        }
+    }, [currentSong]);
+
+    useEffect(() => {
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = isPlayingStore ? 'playing' : 'paused';
+        }
+    }, [isPlayingStore]);
 
     const imageUrl = getSafeImageUrl(currentSong?.image);
     const isPlayerPage = pathname === '/player';
@@ -398,6 +445,16 @@ const MiniPlayer = () => {
                         console.error('Audio error:', e);
                         setError(true);
                     }}
+                />
+            )}
+
+            {/* Silent Audio Trick for Background YT Iframe */}
+            {isYoutube && (
+                <audio
+                    ref={silentAudioRef}
+                    loop
+                    playsInline
+                    src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"
                 />
             )}
         </>
