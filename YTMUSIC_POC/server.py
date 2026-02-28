@@ -79,9 +79,10 @@ else:
 def get_ydl_opts(extra: dict = {}) -> dict:
     """Returns yt-dlp options, injecting cookie file if available."""
     opts = {
-        'format': 'bestaudio[ext=m4a]/bestaudio/best',
+        'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best[acodec!=none]/best',
         'quiet': True,
         'no_warnings': True,
+        # Permissive fallback chain — try m4a first, then webm audio, then anything audio, then best overall
         'extract_flat': False,
     }
     if COOKIE_FILE_PATH:
@@ -157,13 +158,22 @@ async def stream_audio(videoId: str, request: Request, response: Response, downl
         def extract():
             with yt_dlp.YoutubeDL(get_ydl_opts()) as ydl:
                 info = ydl.extract_info(f"https://www.youtube.com/watch?v={videoId}", download=False)
-                return info['url'], info.get('title', videoId)
+                # Get the actual selected format's url and ext
+                url = info['url']
+                title = info.get('title', videoId)
+                ext = info.get('ext', 'm4a')
+                acodec = info.get('acodec', '')
+                return url, title, ext, acodec
         
         loop = asyncio.get_event_loop()
-        url, title = await loop.run_in_executor(executor, extract)
+        url, title, ext, acodec = await loop.run_in_executor(executor, extract)
 
         # Proxy the request to Youtube, forwarding the Range header for seeking
-        req_headers = {}
+        req_headers = {
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36',
+            'Referer': 'https://www.youtube.com/',
+            'Origin': 'https://www.youtube.com',
+        }
         range_header = request.headers.get('Range')
         if range_header:
             req_headers['Range'] = range_header
@@ -174,16 +184,26 @@ async def stream_audio(videoId: str, request: Request, response: Response, downl
 
         r = await loop.run_in_executor(executor, proxy_stream)
 
+        # Build content-type from ext
+        ct_map = {
+            'm4a': 'audio/mp4',
+            'webm': 'audio/webm',
+            'mp3': 'audio/mpeg',
+            'ogg': 'audio/ogg',
+            'opus': 'audio/ogg; codecs=opus',
+        }
+        content_type = ct_map.get(ext, r.headers.get('Content-Type', 'audio/mp4'))
+
         # Pass along important headers
-        resp_headers = {}
-        for h in ["Content-Type", "Content-Length", "Content-Range", "Accept-Ranges"]:
+        resp_headers = {'Content-Type': content_type}
+        for h in ["Content-Length", "Content-Range", "Accept-Ranges"]:
             val = r.headers.get(h)
             if val:
                 resp_headers[h] = val
                 
         if download:
             safe_title = "".join([c for c in title if c.isalpha() or c.isdigit() or c==' ']).rstrip()
-            resp_headers["Content-Disposition"] = f'attachment; filename="{safe_title}.m4a"'
+            resp_headers["Content-Disposition"] = f'attachment; filename="{safe_title}.{ext}"'
         
         def iterate_stream():
             try:
