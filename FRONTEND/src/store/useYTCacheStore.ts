@@ -6,12 +6,14 @@ interface YTCacheState {
     longListening: any[];
     featuredPlaylists: any[];
     trendingCharts: any[];
+    featuredArtists: any[];
     // Per-section loading flags for progressive rendering
     qpReady: boolean;
     afyReady: boolean;
     llReady: boolean;
     fpReady: boolean;
     chartsReady: boolean;
+    artistsReady: boolean;
     isPrefetching: boolean;
     hasPrefetched: boolean;
     prefetchAll: () => Promise<void>;
@@ -23,11 +25,13 @@ export const useYTCacheStore = create<YTCacheState>((set, get) => ({
     longListening: [],
     featuredPlaylists: [],
     trendingCharts: [],
+    featuredArtists: [],
     qpReady: false,
     afyReady: false,
     llReady: false,
     fpReady: false,
     chartsReady: false,
+    artistsReady: false,
     isPrefetching: false,
     hasPrefetched: false,
 
@@ -123,15 +127,26 @@ export const useYTCacheStore = create<YTCacheState>((set, get) => ({
         };
 
 
+        // ── 6. Featured Artists — 3 searches, daily fresh ───
+        const fetchArtists = async () => {
+            const [r1, r2, r3] = await Promise.all([
+                fetchJSON(`${apiUrl}/search?query=${encodeURIComponent('Bollywood Top Singers 2025')}&filter=artists&limit=15`),
+                fetchJSON(`${apiUrl}/search?query=${encodeURIComponent('Popular Hindi Music Artists')}&filter=artists&limit=15`),
+                fetchJSON(`${apiUrl}/search?query=${encodeURIComponent('Top Indian Music Artists')}&filter=artists&limit=10`),
+            ]);
+            const all = [...(r1.data || []), ...(r2.data || []), ...(r3.data || [])];
+            const unique = dedup(all.filter((a: any) => a.browseId && a.thumbnails?.length), 'browseId');
+            set({ featuredArtists: unique.sort(() => 0.5 - Math.random()).slice(0, 28), artistsReady: true });
+        };
+
         try {
-            // All 5 sections fire completely in parallel
-            // Each updates store independently as it resolves → progressive rendering
             await Promise.all([
                 fetchQP(),
                 fetchAFY(),
                 fetchLL(),
                 fetchFP(),
                 fetchCharts(),
+                fetchArtists(),
             ]);
         } catch (error) {
             console.error('YT prefetch error:', error);
