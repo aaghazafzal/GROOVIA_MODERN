@@ -13,6 +13,7 @@ import {
 import { HiOutlineHeart } from 'react-icons/hi';
 import { IoRadioOutline, IoShareOutline, IoMusicalNotesOutline } from 'react-icons/io5';
 import { useYTCacheStore } from '@/store/useYTCacheStore';
+import YTArtistDetail from '@/components/yt-music/YTArtistDetail';
 
 interface ArtistData {
     id: string;
@@ -32,6 +33,7 @@ export default function ArtistPage() {
     const params = useParams();
     const router = useRouter();
     const [artist, setArtist] = useState<ArtistData | null>(null);
+    const [ytRawData, setYtRawData] = useState<any>(null);  // YT Music raw
     const [loading, setLoading] = useState(true);
     const [showFullBio, setShowFullBio] = useState(false);
     const [showAllSongs, setShowAllSongs] = useState(false);
@@ -97,51 +99,16 @@ export default function ArtistPage() {
             const isYTArtist = id?.startsWith('UC');
 
             if (isYTArtist) {
-                // Fetch from YT Music backend
+                // Fetch raw data from YT Music backend
                 const ytApiUrl = process.env.NEXT_PUBLIC_YT_API_URL || 'http://localhost:8000';
                 const res = await fetch(`${ytApiUrl}/artist?channelId=${id}`);
                 if (!res.ok) throw new Error('YT artist fetch failed');
                 const json = await res.json();
-                const d = json?.data;
-                if (!d) { setArtist(null); return; }
-
-                // Map YT Music artist format → ArtistData
-                const mapThumb = (thumbs: any[]) =>
-                    (thumbs || []).map((t: any) => ({ quality: 'high', url: t.url }));
-                const mapSong = (s: any) => ({
-                    id: s.videoId,
-                    name: s.title,
-                    type: 'youtube',
-                    youtubeId: s.videoId,
-                    url: '',
-                    image: mapThumb(s.thumbnails || []),
-                    downloadUrl: [],
-                    artists: { primary: [{ name: s.artists?.[0] || d.name || '' }] },
-                    album: { name: s.album || '' },
-                    duration: '',
-                });
-                setArtist({
-                    id,
-                    name: d.name || '',
-                    image: mapThumb(d.thumbnails || []),
-                    followerCount: d.subscribers ? String(d.subscribers).replace(/[^0-9]/g, '') : undefined,
-                    fanCount: d.subscribers,
-                    bio: d.description || '',
-                    topSongs: (d.songs?.results || []).map(mapSong),
-                    topAlbums: (d.albums?.results || []).map((a: any) => ({
-                        id: a.browseId, name: a.title, year: a.year,
-                        image: mapThumb(a.thumbnails || []),
-                    })),
-                    singles: (d.singles?.results || []).map((s: any) => ({
-                        id: s.browseId, name: s.title, year: s.year,
-                        image: mapThumb(s.thumbnails || []),
-                    })),
-                    similarArtists: (d.related?.results || []).map((r: any) => ({
-                        id: r.browseId, name: r.title,
-                        image: mapThumb(r.thumbnails || []),
-                    })),
-                    featuredPlaylists: [],
-                });
+                if (json?.data) {
+                    setYtRawData(json.data);
+                } else {
+                    setYtRawData(null);
+                }
             } else {
                 // JioSaavan artist
                 const response = await api.get('/artists', { params: { id } });
@@ -154,6 +121,7 @@ export default function ArtistPage() {
         } catch (error) {
             console.error('Error fetching artist:', error);
             setArtist(null);
+            setYtRawData(null);
         } finally {
             setLoading(false);
         }
@@ -191,6 +159,11 @@ export default function ArtistPage() {
                 <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
             </div>
         );
+    }
+
+    // ── YT Music artist — use dedicated component ────────────────────────────
+    if (ytRawData) {
+        return <YTArtistDetail data={ytRawData} channelId={params.id as string} />;
     }
 
     if (!artist) {
