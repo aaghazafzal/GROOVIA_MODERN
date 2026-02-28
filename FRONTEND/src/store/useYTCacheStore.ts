@@ -100,19 +100,28 @@ export const useYTCacheStore = create<YTCacheState>((set, get) => ({
             set({ featuredPlaylists: unique.sort(() => 0.5 - Math.random()).slice(0, 10), fpReady: true });
         };
 
-        // ── 5. Trending Charts — 1 call ──────────────────────
+        // ── 5. Trending Charts — robust with fallback ────────
         const fetchCharts = async () => {
             const res = await fetchJSON(`${apiUrl}/charts?country=IN`);
-            const songs = (res?.data?.songs || []).slice(0, 20).map((t: any) => ({
+            let songs = (res?.data?.songs || []).filter((t: any) => t?.videoId);
+
+            // If backend returned empty songs, use search as fallback
+            if (songs.length === 0) {
+                const fallback = await fetchJSON(`${apiUrl}/search?query=${encodeURIComponent('India Top Hindi Songs 2025')}&filter=songs&limit=20`);
+                songs = (fallback?.data || []).filter((t: any) => t?.videoId);
+            }
+
+            const mapped = songs.slice(0, 20).map((t: any) => ({
                 videoId: t.videoId,
-                title: t.title,
+                title: t.title || t.name || '',
                 thumbnails: t.thumbnails || [],
                 artists: t.artists || [],
                 album: t.album || null,
                 duration: t.duration || '',
             }));
-            set({ trendingCharts: songs, chartsReady: true });
+            set({ trendingCharts: mapped, chartsReady: true });
         };
+
 
         try {
             // All 5 sections fire completely in parallel

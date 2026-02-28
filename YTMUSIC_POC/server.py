@@ -175,26 +175,39 @@ async def get_charts_data(country: str = "IN"):
         return {"data": cached, "cached": True}
     try:
         loop = asyncio.get_event_loop()
-        # Step 1: Get charts to find chart playlist ID
+
+        # Step 1: Get charts metadata
         charts = await loop.run_in_executor(executor, lambda: yt.get_charts(country=country))
-        
+
         songs = []
+        # Step 2: Try to get songs from the chart playlist
         if charts.get("videos"):
             playlist_id = charts["videos"][0].get("playlistId")
             if playlist_id:
-                # Step 2: Get actual songs from the chart playlist
                 playlist = await loop.run_in_executor(
                     executor,
-                    lambda: yt.get_playlist(playlistId=playlist_id, limit=20)
+                    lambda: yt.get_playlist(playlistId=playlist_id, limit=30)
                 )
-                songs = playlist.get("tracks", [])
+                tracks = playlist.get("tracks", []) or []
+                # Only keep tracks with a valid videoId
+                songs = [t for t in tracks if t.get("videoId")]
+
+        # Step 3: Fallback — if still empty, do a direct search
+        if not songs:
+            print(f"Charts playlist empty for {country}, falling back to search")
+            fallback = await loop.run_in_executor(
+                executor,
+                lambda: yt.search("India Top Songs Hindi 2025", filter="songs", limit=20)
+            )
+            songs = [s for s in (fallback or []) if s.get("videoId")]
 
         result = {"charts": charts, "songs": songs}
-        cache_set(cache_key, result, ttl=3600)  # 1 hour (charts update daily)
+        cache_set(cache_key, result, ttl=3600)  # 1 hour
         return {"data": result}
     except Exception as e:
         print(f"Error fetching charts: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
