@@ -366,7 +366,7 @@ export default function YTArtistDetail({ data, channelId }: { data: any; channel
                                         <span className="text-gray-500 w-5 text-center text-sm group-hover:hidden">{i + 1}</span>
                                         <BiPlay size={20} className="hidden group-hover:block text-white w-5" />
                                         <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-zinc-800">
-                                            <YTImg src={bestUrl(songs[i]?.thumbnails || song.image?.map((t: any) => ({ url: t.url, width: 200 }))?.length ? (song.image?.sort((a: any, b: any) => (b.width || 0) - (a.width || 0))[0]?.url || '') : bestUrl(songs[i]?.thumbnails || []))} alt={song.name} className="w-full h-full object-cover" />
+                                            <YTImg src={song.image?.[0]?.url || ''} alt={song.name} className="w-full h-full object-cover" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h3 className={`font-semibold text-base line-clamp-1 ${currentSong?.id === song.id ? 'text-purple-400' : 'text-white'}`}>{he.decode(song.name)}</h3>
