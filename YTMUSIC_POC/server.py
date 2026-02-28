@@ -119,15 +119,10 @@ async def stream_audio(videoId: str, request: Request, response: Response, downl
                 'format': 'bestaudio[ext=m4a]/bestaudio/best',
                 'quiet': True,
                 'no_warnings': True,
-                'extract_flat': False,
-                'extractor_args': {
-                    'youtube': {
-                        'player_client': ['android', 'web']
-                    }
-                }
+                'extract_flat': False
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(f"https://music.youtube.com/watch?v={videoId}", download=False)
+                info = ydl.extract_info(f"https://www.youtube.com/watch?v={videoId}", download=False)
                 return info['url'], info.get('title', videoId)
         
         loop = asyncio.get_event_loop()
