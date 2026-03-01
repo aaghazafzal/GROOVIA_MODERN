@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request, Response, Query, Header
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from ytmusicapi import YTMusic
@@ -193,40 +194,131 @@ async def prefetch(videoId: str):
 # ─────────────────────────────────────────────────────────────────────────────
 @app.get("/stream")
 async def stream_audio(
+    request: Request,
     videoId: str,
     range: str = Header(None, alias="range"),
-    request_range: str = Query(None),
-    download: bool = False,
-    title: str = "song"
 ):
     """
-    Proxy-streams audio from YouTube using MUZIFY backend.
+    Proxy-streams audio from YouTube natively (for Render deployment).
+    Supports partial content (Range) streaming.
     """
-    from fastapi.responses import RedirectResponse
-    import urllib.parse
-    if download:
-        title_encoded = urllib.parse.quote(title)
-        return RedirectResponse(url=f"http://127.0.0.1:8000/api/player/download?videoId={videoId}&title={title_encoded}")
-    return RedirectResponse(url=f"http://127.0.0.1:8000/api/player/stream?videoId={videoId}")
+    try:
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(executor, _extract_stream_url, videoId)
+        url = data["url"]
+        http_headers = data.get("http_headers", {})
+
+        req_headers = {
+            "User-Agent": http_headers.get(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            ),
+        }
+
+        range_header = request.headers.get("range")
+        if range_header:
+            req_headers["Range"] = range_header
+
+        client = httpx.AsyncClient(timeout=30)
+        req = client.build_request("GET", url, headers=req_headers)
+        r = await client.send(req, stream=True, follow_redirects=True)
+
+        resp_headers = {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "no-cache",
+        }
+        
+        if "Content-Range" in r.headers:
+            resp_headers["Content-Range"] = r.headers["Content-Range"]
+        if "Content-Length" in r.headers:
+            resp_headers["Content-Length"] = r.headers["Content-Length"]
+
+        async def proxy_stream():
+            try:
+                async for chunk in r.aiter_bytes(chunk_size=65536):
+                    yield chunk
+            finally:
+                await r.aclose()
+                await client.aclose()
+
+        return StreamingResponse(
+            proxy_stream(),
+            status_code=r.status_code,
+            media_type=r.headers.get("Content-Type", "audio/webm"),
+            headers=resp_headers,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Stream failed for {videoId}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# /download — One-click download (same as /stream?download=true but clean URL)
+# /download — One-click download
 # ─────────────────────────────────────────────────────────────────────────────
 @app.get("/download")
 async def download_audio(
     videoId: str,
-    request: Request,
-    response: Response,
     title: str = Query("song", description="Song title for filename"),
 ):
     """
-    One-click audio download. Triggers browser file save dialog.
+    One-click audio download. Streams back to client without HTTP redirects.
     """
-    from fastapi.responses import RedirectResponse
-    import urllib.parse
-    title_encoded = urllib.parse.quote(title)
-    return RedirectResponse(url=f"http://127.0.0.1:8000/api/player/download?videoId={videoId}&title={title_encoded}")
+    try:
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(executor, _extract_stream_url, videoId)
+        url = data["url"]
+        http_headers = data.get("http_headers", {})
+        ext = data.get("ext", "webm")
+
+        content_type_map = {
+            "m4a": "audio/mp4",
+            "webm": "audio/webm",
+            "mp4": "audio/mp4",
+            "opus": "audio/ogg",
+        }
+        content_type = content_type_map.get(ext, "audio/webm")
+
+        safe_title = "".join(c for c in title if c.isalnum() or c in " -_").strip()
+        filename = f"{safe_title or 'song'}.{ext}"
+
+        async def download_stream():
+            async with httpx.AsyncClient(timeout=60) as client:
+                async with client.stream(
+                    "GET",
+                    url,
+                    headers={
+                        "User-Agent": http_headers.get(
+                            "User-Agent",
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36",
+                        )
+                    },
+                    follow_redirects=True,
+                ) as resp:
+                    async for chunk in resp.aiter_bytes(chunk_size=65536):
+                        yield chunk
+
+        logger.info(f"⬇️ Download: {filename}")
+        return StreamingResponse(
+            download_stream(),
+            media_type=content_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Expose-Headers": "Content-Disposition",
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Download failed for {videoId}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
