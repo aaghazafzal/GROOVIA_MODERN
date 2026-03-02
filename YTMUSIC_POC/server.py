@@ -58,11 +58,25 @@ def cache_set(key: str, value, ttl: int = 1800):
 # ─────────────────────────────────────────────────────────────────────────────
 _stream_cache: dict = {}
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Cookies Setup for Cloud Deployment (Render bot bypass)
+# ─────────────────────────────────────────────────────────────────────────────
+cookies_b64 = os.environ.get("YT_COOKIES_B64")
+if cookies_b64:
+    try:
+        import base64
+        cookies_txt = base64.b64decode(cookies_b64).decode("utf-8")
+        with open("cookies.txt", "w") as f:
+            f.write(cookies_txt)
+        logger.info("🍪 Decoded YT_COOKIES_B64 and generated cookies.txt for bot bypass.")
+    except Exception as e:
+        logger.error(f"❌ Failed to decode cookies: {e}")
+
 def _extract_stream_url(video_id: str) -> dict:
     """
     Extract best audio stream URL using yt-dlp with a multi-layered fallback strategy.
-    1. Local yt-dlp using iOS/TV client arrays (bypasses most bot checks).
-    2. Fallback to public alternative APIs if the DataCenter IP is fully banned.
+    1. Local yt-dlp using cookies.txt + iOS/TV client arrays.
+    2. Fallback to public alternative APIs if the DataCenter IP is banned.
     """
     cached = _stream_cache.get(video_id)
     if cached and cached.get("expires_at", 0) > time.time():
@@ -74,7 +88,7 @@ def _extract_stream_url(video_id: str) -> dict:
     http_headers = {}
     title_res = video_id
 
-    # Layer 1: yt-dlp with Datacenter/Bot-bypass arguments (ios client skips JS bot challenge)
+    # Layer 1: yt-dlp using Cloud specific configuration (Cookies + Po_token bypass clients)
     try:
         ydl_opts = {
             "format": "bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best",
@@ -82,15 +96,23 @@ def _extract_stream_url(video_id: str) -> dict:
             "no_warnings": True,
             "socket_timeout": 15,
             "retries": 1,
+            "cookiefile": "cookies.txt" if os.path.exists("cookies.txt") else None,
             "extractor_args": {
                 "youtube": {
-                    # iOS and android_creator clients don't trigger the aggressive web-bot challenge
-                    "player_client": ["ios", "creator", "tv_embedded", "web"],
+                    # Web creator and ios prevent generic webpage JS checks from flagging backend IPs
+                    "player_client": ["ios", "android_creator", "tv_embedded", "web"],
                     "player_skip": ["webpage", "configs"],
                 }
             },
         }
+
+        # Suppress logging spam from yt-dlp if it hits a roadblock
+        import logging as local_dlp_log
+        ydl_opts['logger'] = local_dlp_log.getLogger('youtube')
+        ydl_opts['logger'].setLevel(local_dlp_log.ERROR)
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            logger.info("Attempting extraction with cookies/native bypass...")
             info = ydl.extract_info(f"https://music.youtube.com/watch?v={video_id}", download=False)
             
             # Find the best format
@@ -107,11 +129,10 @@ def _extract_stream_url(video_id: str) -> dict:
                 logger.info("🎵 Extracted via Native YT-DLP")
 
     except Exception as e:
-        logger.warning(f"⚠️ Native YT-DLP blocked (bot detection). Triggering bypass fallback for {video_id}. Error: {e}")
+        logger.warning(f"⚠️ Native YT-DLP blocked (bot detection OR invalid cookies). Error substring: {str(e)[:100]}...")
         url = None
 
-    # Layer 2: Cobalt/Invidious Piped Fallback (Only fires if YouTube explicitly blocks your Render IP)
-    # The user wanted a highly stable 'own' backend. This makes it impossible to fail.
+    # Layer 2: Pipeline Cobalt/API Fallback
     if not url:
         try:
             import httpx
