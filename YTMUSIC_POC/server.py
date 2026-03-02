@@ -105,66 +105,32 @@ def _make_sapisidhash(sapisid: str, origin: str = "https://www.youtube.com") -> 
 
 def _innertube_extract(video_id: str) -> dict | None:
     """
-    Call YouTube InnerTube API with full authentication from cookies.txt.
-    Uses ANDROID_MUSIC client + auth cookies + SAPISIDHASH header.
+    Call YouTube InnerTube API via ytmusicapi with full authentication from cookies.txt.
     Works from ANY IP (including Render datacenter) when valid auth cookies present.
     """
     cookies = _parse_netscape_cookies("cookies.txt") if os.path.exists("cookies.txt") else {}
-
-    sapisid = cookies.get("SAPISID") or cookies.get("__Secure-3PAPISID") or cookies.get("__Secure-1PAPISID")
-
-    payload = {
-        "context": {
-            "client": {
-                "clientName": "ANDROID_MUSIC",
-                "clientVersion": "7.27.52",
-                "androidSdkVersion": 30,
-                "hl": "en",
-                "gl": "IN",
-                "userAgent": "com.google.android.apps.youtube.music/7.27.52 (Linux; U; Android 11) gzip",
-            }
-        },
-        "videoId": video_id,
-        "playbackContext": {
-            "contentPlaybackContext": {"signatureTimestamp": 19950}
-        },
-        "racyCheckOk": True,
-        "contentCheckOk": True,
-    }
-
-    headers = {
-        "Content-Type": "application/json",
-        "User-Agent": "com.google.android.apps.youtube.music/7.27.52 (Linux; U; Android 11) gzip",
-        "X-YouTube-Client-Name": "21",
-        "X-YouTube-Client-Version": "7.27.52",
-        "Origin": "https://music.youtube.com",
-        "X-Origin": "https://music.youtube.com",
-    }
-
-    # Add auth if cookies available
+    
+    headers = None
     if cookies:
-        # Build Cookie header string from all cookies
         cookie_str = "; ".join(f"{k}={v}" for k, v in cookies.items())
-        headers["Cookie"] = cookie_str
-        logger.info(f"🔑 InnerTube: using {len(cookies)} auth cookies (SID present: {'SID' in cookies})")
-
-        # Add SAPISIDHASH authorization for authenticated requests
+        sapisid = cookies.get("SAPISID") or cookies.get("__Secure-3PAPISID") or cookies.get("__Secure-1PAPISID")
         if sapisid:
-            headers["Authorization"] = _make_sapisidhash(sapisid)
-            headers["X-Goog-AuthUser"] = "0"
-    else:
-        logger.warning("⚠️ InnerTube: no cookies found, trying unauthenticated")
+            import hashlib
+            ts = int(time.time())
+            h = hashlib.sha1(f"{ts} {sapisid} https://music.youtube.com".encode()).hexdigest()
+            auth = f"SAPISIDHASH {ts}_{h}"
+            headers = {"Cookie": cookie_str, "Authorization": auth}
 
-    api_url = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false"
-
-    with httpx.Client(timeout=15) as client:
-        resp = client.post(api_url, json=payload, headers=headers)
-
-    if resp.status_code != 200:
-        logger.warning(f"InnerTube HTTP {resp.status_code} for {video_id}")
+    try:
+        if headers:
+            yt = YTMusic(auth=headers)
+        else:
+            yt = YTMusic()
+            
+        data = yt.get_song(video_id)
+    except Exception as e:
+        logger.warning(f"InnerTube request failed: {e}")
         return None
-
-    data = resp.json()
 
     playability = data.get("playabilityStatus", {})
     status = playability.get("status")
@@ -197,7 +163,7 @@ def _innertube_extract(video_id: str) -> dict | None:
     return {
         "url": stream_url,
         "ext": ext,
-        "http_headers": {"User-Agent": "com.google.android.apps.youtube.music/7.27.52 (Linux; U; Android 11) gzip"},
+        "http_headers": {"User-Agent": "Mozilla/5.0"},
         "title": title,
     }
 
