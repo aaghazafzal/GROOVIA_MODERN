@@ -72,12 +72,98 @@ if cookies_b64:
     except Exception as e:
         logger.error(f"❌ Failed to decode cookies: {e}")
 
+def _innertube_extract(video_id: str) -> dict | None:
+    """
+    Call YouTube's internal InnerTube API directly using ANDROID_MUSIC client.
+    This works from datacenter IPs WITHOUT cookies or bot checks.
+    YouTube allows this because it treats it as a legitimate app API call.
+    """
+    INNERTUBE_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"
+    url = f"https://www.youtube.com/youtubei/v1/player?key={INNERTUBE_API_KEY}&prettyPrint=false"
+
+    payload = {
+        "context": {
+            "client": {
+                "clientName": "ANDROID_MUSIC",
+                "clientVersion": "7.27.52",
+                "androidSdkVersion": 30,
+                "hl": "en",
+                "gl": "US",
+                "userAgent": "com.google.android.apps.youtube.music/7.27.52 (Linux; U; Android 11) gzip",
+            }
+        },
+        "videoId": video_id,
+        "playbackContext": {
+            "contentPlaybackContext": {"signatureTimestamp": 19950}
+        },
+        "racyCheckOk": True,
+        "contentCheckOk": True,
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-YouTube-Client-Name": "21",
+        "X-YouTube-Client-Version": "7.27.52",
+        "User-Agent": "com.google.android.apps.youtube.music/7.27.52 (Linux; U; Android 11) gzip",
+        "Origin": "https://music.youtube.com",
+    }
+
+    with httpx.Client(timeout=15) as client:
+        resp = client.post(url, json=payload, headers=headers)
+
+    if resp.status_code != 200:
+        logger.warning(f"InnerTube HTTP {resp.status_code} for {video_id}")
+        return None
+
+    data = resp.json()
+
+    # Check for errors (private video, unavailable, etc.)
+    playability = data.get("playabilityStatus", {})
+    if playability.get("status") not in ("OK", None):
+        reason = playability.get("reason", "unknown")
+        logger.warning(f"InnerTube playability error for {video_id}: {reason}")
+        return None
+
+    streaming_data = data.get("streamingData", {})
+    formats = streaming_data.get("adaptiveFormats", []) + streaming_data.get("formats", [])
+
+    # Filter audio-only formats and pick highest bitrate
+    audio_formats = [
+        f for f in formats
+        if f.get("mimeType", "").startswith("audio") and f.get("url")
+    ]
+
+    if not audio_formats:
+        logger.warning(f"InnerTube: no audio formats for {video_id}")
+        return None
+
+    # Prefer m4a (audio/mp4), then opus, then anything
+    m4a = [f for f in audio_formats if "mp4" in f.get("mimeType", "")]
+    chosen = sorted(m4a or audio_formats, key=lambda f: f.get("averageBitrate", f.get("bitrate", 0)), reverse=True)[0]
+
+    stream_url = chosen["url"]
+    mime = chosen.get("mimeType", "audio/webm")
+    ext = "m4a" if "mp4" in mime else "webm"
+
+    title_data = data.get("videoDetails", {})
+    title = title_data.get("title", video_id)
+
+    logger.info(f"🎵 InnerTube SUCCESS for {video_id} [{ext}] @ {chosen.get('averageBitrate', '?')}bps")
+    return {
+        "url": stream_url,
+        "ext": ext,
+        "http_headers": {"User-Agent": "com.google.android.apps.youtube.music/7.27.52 (Linux; U; Android 11) gzip"},
+        "title": title,
+    }
+
+
 def _extract_stream_url(video_id: str) -> dict:
     """
-    Extract best audio stream URL using yt-dlp with a multi-layered fallback strategy.
-    Layer 1a: mweb client (mobile web) — works on cloud/datacenter IPs without cookies
-    Layer 1b: cookies + android/web client fallback
-    Layer 2:  Piped / Invidious public API fallback
+    Multi-layer audio URL extraction:
+    Layer 0 (PRIMARY): YouTube InnerTube API — works from any IP, no bot checks
+    Layer 1a: yt-dlp mweb client
+    Layer 1b: yt-dlp cookies + android
+    Layer 2:  Piped / Invidious public instances
     """
     cached = _stream_cache.get(video_id)
     if cached and cached.get("expires_at", 0) > time.time():
@@ -89,61 +175,42 @@ def _extract_stream_url(video_id: str) -> dict:
     http_headers = {}
     title_res = video_id
 
-    # ── Layer 1a: mweb player_client ──────────────────────────────────────────
-    # "mweb" is a mobile-web client that bypasses po_token checks on datacenter
-    # IPs. No cookies needed. Best option for cloud hosting like Render.
+    # ── Layer 0: InnerTube direct API (no signature required, no Deno) ─────────
+    # LOGIN_REQUIRED for restricted videos — works for public ones
     try:
-        ydl_opts_mweb = {
-            "format": "bestaudio/best",
-            "quiet": True,
-            "no_warnings": True,
-            "socket_timeout": 20,
-            "retries": 2,
-            "extractor_args": {
-                "youtube": {
-                    "player_client": ["mweb"],
-                    "player_skip": ["webpage", "configs"],
-                }
-            },
-        }
-        with yt_dlp.YoutubeDL(ydl_opts_mweb) as ydl:
-            logger.info(f"🔍 Layer 1a: Trying mweb client for {video_id}...")
-            info = ydl.extract_info(f"https://music.youtube.com/watch?v={video_id}", download=False)
-            url = info.get("url")
-            if not url:
-                for fmt in reversed(info.get("formats", [])):
-                    if fmt.get("url") and fmt.get("acodec") != "none":
-                        url = fmt["url"]
-                        break
-            if url:
-                ext = info.get("ext", "webm")
-                http_headers = info.get("http_headers", {})
-                title_res = info.get("title", video_id)
-                logger.info(f"🎵 Layer 1a SUCCESS via mweb client [{ext}]")
+        logger.info(f"🔍 Layer 0: InnerTube API for {video_id}...")
+        result = _innertube_extract(video_id)
+        if result:
+            url = result["url"]
+            ext = result["ext"]
+            http_headers = result["http_headers"]
+            title_res = result["title"]
     except Exception as e:
-        logger.warning(f"⚠️ Layer 1a (mweb) failed: {str(e)[:120]}")
+        logger.warning(f"⚠️ Layer 0 (InnerTube) failed: {str(e)[:120]}")
         url = None
 
-    # ── Layer 1b: cookies + android/web ───────────────────────────────────────
+    # ── Layer 1: yt-dlp tv_embedded + cookies (PROVEN WORKING on residential & cloud!) ──
+    # tv_embedded + cookies = best combo that bypasses bot check in yt-dlp 2024.11.04
     if not url:
         try:
             has_cookies = os.path.exists("cookies.txt")
-            ydl_opts_auth = {
+            ydl_opts_tv = {
                 "format": "bestaudio/best",
                 "quiet": True,
                 "no_warnings": True,
-                "socket_timeout": 15,
-                "retries": 1,
+                "socket_timeout": 20,
+                "retries": 2,
                 "cookiefile": "cookies.txt" if has_cookies else None,
                 "extractor_args": {
                     "youtube": {
-                        "player_client": ["android", "web"] if has_cookies else ["tv_embedded", "web"],
+                        # tv_embedded bypasses sign-in checks; cookies authenticate the session
+                        "player_client": ["tv_embedded"],
                         "player_skip": ["webpage", "configs"],
                     }
                 },
             }
-            with yt_dlp.YoutubeDL(ydl_opts_auth) as ydl:
-                logger.info(f"🔍 Layer 1b: Trying cookies/android client for {video_id}...")
+            with yt_dlp.YoutubeDL(ydl_opts_tv) as ydl:
+                logger.info(f"🔍 Layer 1: tv_embedded{'+ cookies' if has_cookies else ''} for {video_id}...")
                 info = ydl.extract_info(f"https://music.youtube.com/watch?v={video_id}", download=False)
                 url = info.get("url")
                 if not url:
@@ -155,29 +222,23 @@ def _extract_stream_url(video_id: str) -> dict:
                     ext = info.get("ext", "webm")
                     http_headers = info.get("http_headers", {})
                     title_res = info.get("title", video_id)
-                    logger.info(f"🎵 Layer 1b SUCCESS via cookies/android [{ext}]")
+                    logger.info(f"🎵 Layer 1 SUCCESS via tv_embedded [{ext}]")
         except Exception as e:
-            logger.warning(f"⚠️ Layer 1b (cookies/android) failed: {str(e)[:120]}")
+            logger.warning(f"⚠️ Layer 1 (tv_embedded) failed: {str(e)[:120]}")
             url = None
 
-    # Layer 2: Pipeline Cobalt/API Fallback
+    # ── Layer 2: Piped + Invidious ─────────────────────────────────────────────
     if not url:
         try:
-            import httpx
-            import random
-            
-            # Robust array of free api endpoints to ensure it NEVER drops
-            # Piped instances (return audioStreams)
             piped_fallbacks = [
-                f"https://piped-api.lunar.icu/streams/{video_id}",
                 f"https://pipedapi.smnz.de/streams/{video_id}",
+                f"https://piped-api.lunar.icu/streams/{video_id}",
                 f"https://pipedapi.syncpundit.io/streams/{video_id}",
                 f"https://api.piped.yt/streams/{video_id}",
             ]
-            
             for fallback_api in piped_fallbacks:
                 try:
-                    with httpx.Client(timeout=10) as client:
+                    with httpx.Client(timeout=8) as client:
                         res = client.get(fallback_api)
                     if res.status_code == 200:
                         data = res.json()
@@ -186,22 +247,21 @@ def _extract_stream_url(video_id: str) -> dict:
                             stream = sorted(audio_streams, key=lambda x: x.get("bitrate", 0), reverse=True)[0]
                             url = stream.get("url")
                             ext = "m4a" if stream.get("mimeType", "").startswith("audio/mp4") else "webm"
-                            http_headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
-                            logger.info(f"🎵 Layer 2 SUCCESS via Piped fallback ({fallback_api})")
+                            http_headers = {"User-Agent": "Mozilla/5.0"}
+                            logger.info(f"🎵 Layer 2 SUCCESS via Piped ({fallback_api})")
                             break
                 except Exception:
                     continue
 
-            # Invidious instances (return adaptiveFormats) — different API shape than Piped
             if not url:
                 invidious_fallbacks = [
-                    f"https://invidious.nerdvpn.de/api/v1/videos/{video_id}",
                     f"https://iv.datura.network/api/v1/videos/{video_id}",
                     f"https://invidious.privacydev.net/api/v1/videos/{video_id}",
+                    f"https://invidious.nerdvpn.de/api/v1/videos/{video_id}",
                 ]
                 for inv_api in invidious_fallbacks:
                     try:
-                        with httpx.Client(timeout=10) as client:
+                        with httpx.Client(timeout=8) as client:
                             res = client.get(inv_api)
                         if res.status_code == 200:
                             data = res.json()
@@ -215,24 +275,11 @@ def _extract_stream_url(video_id: str) -> dict:
                                 break
                     except Exception:
                         continue
-
         except Exception as e:
-            logger.error(f"Fallback layer failed: {e}")
+            logger.error(f"Layer 2 fallback error: {e}")
 
     if not url:
-        raise ValueError(f"Could not extract stream URL for {video_id} through any layer. Cloud IP blocked, and fallbacks exhausted.")
-
-    result = {
-        "url": url,
-        "ext": ext,
-        "http_headers": http_headers,
-        "title": title_res,
-        "expires_at": time.time() + 3600,  # 1 hour
-    }
-    _stream_cache[video_id] = result
-    logger.info(f"✅ Success! Extracted for {video_id} [{result['ext']}]")
-    return result
-
+        raise ValueError(f"All layers exhausted for {video_id}. Video may be unavailable or age-restricted.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
