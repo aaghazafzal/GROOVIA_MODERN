@@ -170,10 +170,8 @@ def _innertube_extract(video_id: str) -> dict | None:
 
 def _extract_stream_url(video_id: str) -> dict:
     """
-    Multi-layer audio URL extraction:
-    Layer 0 (PRIMARY): YouTube InnerTube API — works from any IP with auth
-    Layer 1: pytubefix (native Python approach, no Deno required)
-    Layer 2: Piped / Invidious public instances
+    Audio URL extraction exclusively using yt-dlp (fast android client)
+    Bypasses Render proxy blocks and JavaScript signature requirements.
     """
     cached = _stream_cache.get(video_id)
     if cached and cached.get("expires_at", 0) > time.time():
@@ -182,99 +180,48 @@ def _extract_stream_url(video_id: str) -> dict:
 
     url = None
     ext = "webm"
-    http_headers = {}
+    http_headers = {"User-Agent": "Mozilla/5.0"}
     title_res = video_id
 
-    # ── Layer 0: InnerTube direct API (no signature required, no Deno) ─────────
-    # LOGIN_REQUIRED for restricted videos — works for public ones
     try:
-        logger.info(f"🔍 Layer 0: InnerTube API for {video_id}...")
-        result = _innertube_extract(video_id)
-        if result:
-            url = result["url"]
-            ext = result["ext"]
-            http_headers = result["http_headers"]
-            title_res = result["title"]
+        logger.info(f"🔍 Extracting via yt-dlp (Android Client) for {video_id}...")
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': False,
+            'source_address': '0.0.0.0', # Force IPv4, often helps bypass generic IPv6 bans on Render
+            'cookiefile': 'cookies.txt' if os.path.exists('cookies.txt') else None,
+            'extractor_args': {
+                'youtube': ['player_client=android'] # Pure android client, bypasses signature decoding, faster and less blocked
+            }
+        }
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"https://music.youtube.com/watch?v={video_id}", download=False)
+            if info:
+                url = info.get('url')
+                ext = info.get('ext', 'webm')
+                # Use yt-dlp headers if provided, otherwise fallback
+                http_headers = info.get('http_headers', {"User-Agent": "com.google.android.youtube/19.29.37 (Linux; U; Android 11)"})
+                title_res = info.get('title', video_id)
+                logger.info(f"🎵 yt-dlp SUCCESS for {video_id} [{ext}]")
+                
+                # Cache successful url for 50 minutes (Youtube links expire in ~6 hours usually)
+                cache_data = {
+                    "url": url,
+                    "ext": ext,
+                    "http_headers": http_headers,
+                    "title": title_res,
+                    "expires_at": time.time() + 3000
+                }
+                _stream_cache[video_id] = cache_data
+                return cache_data
+                
     except Exception as e:
-        logger.warning(f"⚠️ Layer 0 (InnerTube) failed: {str(e)[:120]}")
-        url = None
+        logger.error(f"⚠️ yt-dlp extraction failed for {video_id}: {e}")
 
-    # ── Layer 1: Pytubefix ─────────────────────────────────────────────────────
-    # Replaces yt-dlp. Pytubefix has built-in PO token handling via pure Python,
-    # no Deno runtime required, works natively.
-    if not url:
-        try:
-            from pytubefix import YouTube
-            yt_url = f"https://music.youtube.com/watch?v={video_id}"
-            yt = YouTube(yt_url, use_oauth=False, allow_oauth_cache=False)
-            logger.info(f"🔍 Layer 1: Try pytubefix for {video_id}...")
-            
-            audio_streams = yt.streams.filter(only_audio=True).order_by('abr').desc()
-            if audio_streams:
-                best_audio = audio_streams[0]
-                url = best_audio.url
-                ext = "m4a" if "mp4" in best_audio.mime_type else "webm"
-                http_headers = {"User-Agent": "Mozilla/5.0"}
-                title_res = yt.title or video_id
-                logger.info(f"🎵 Layer 1 SUCCESS via Pytubefix [{ext}]")
-        except Exception as e:
-            logger.warning(f"⚠️ Layer 1 (Pytubefix) failed: {e}")
-            url = None
-
-
-    # ── Layer 2: Piped + Invidious ─────────────────────────────────────────────
-    if not url:
-        try:
-            piped_fallbacks = [
-                f"https://pipedapi.smnz.de/streams/{video_id}",
-                f"https://piped-api.lunar.icu/streams/{video_id}",
-                f"https://pipedapi.syncpundit.io/streams/{video_id}",
-                f"https://api.piped.yt/streams/{video_id}",
-            ]
-            for fallback_api in piped_fallbacks:
-                try:
-                    with httpx.Client(timeout=8) as client:
-                        res = client.get(fallback_api)
-                    if res.status_code == 200:
-                        data = res.json()
-                        audio_streams = data.get("audioStreams", [])
-                        if audio_streams:
-                            stream = sorted(audio_streams, key=lambda x: x.get("bitrate", 0), reverse=True)[0]
-                            url = stream.get("url")
-                            ext = "m4a" if stream.get("mimeType", "").startswith("audio/mp4") else "webm"
-                            http_headers = {"User-Agent": "Mozilla/5.0"}
-                            logger.info(f"🎵 Layer 2 SUCCESS via Piped ({fallback_api})")
-                            break
-                except Exception:
-                    continue
-
-            if not url:
-                invidious_fallbacks = [
-                    f"https://iv.datura.network/api/v1/videos/{video_id}",
-                    f"https://invidious.privacydev.net/api/v1/videos/{video_id}",
-                    f"https://invidious.nerdvpn.de/api/v1/videos/{video_id}",
-                ]
-                for inv_api in invidious_fallbacks:
-                    try:
-                        with httpx.Client(timeout=8) as client:
-                            res = client.get(inv_api)
-                        if res.status_code == 200:
-                            data = res.json()
-                            adaptive = [f for f in data.get("adaptiveFormats", []) if f.get("type", "").startswith("audio")]
-                            if adaptive:
-                                stream = sorted(adaptive, key=lambda x: int(x.get("bitrate", 0)), reverse=True)[0]
-                                url = stream.get("url")
-                                ext = "m4a" if "mp4" in stream.get("type", "") else "webm"
-                                http_headers = {"User-Agent": "Mozilla/5.0"}
-                                logger.info(f"🎵 Layer 2 SUCCESS via Invidious ({inv_api})")
-                                break
-                    except Exception:
-                        continue
-        except Exception as e:
-            logger.error(f"Layer 2 fallback error: {e}")
-
-    if not url:
-        raise ValueError(f"All layers exhausted for {video_id}. Video may be unavailable or age-restricted.")
+    raise ValueError(f"Stream extraction failed for {video_id}. Video may be unavailable, age-restricted, or IP might be completely blocked.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
