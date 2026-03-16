@@ -8,7 +8,6 @@ from concurrent.futures import ThreadPoolExecutor
 import time
 import logging
 import os
-import yt_dlp
 import httpx
 
 # ── Deno PATH setup (installed by build.sh, needed for yt-dlp JS challenge solving) ──
@@ -204,11 +203,8 @@ def _extract_stream_url(video_id: str) -> dict:
     """
     Audio URL extraction - 3 layers:
     LAYER 0 (PRIMARY): YouTube InnerTube API (ytmusicapi.get_song)
-      - Makes server-to-server HTTPS API calls, NOT browser scraping
-      - Works from ANY IP including Render datacenters when cookies are valid
-      - Fast, reliable, and returns direct CDN URLs
-    LAYER 1: yt-dlp with multiple client spoofing (fallback)
-    LAYER 2: pytubefix (last resort)
+    LAYER 1: pytubefix (local fallback)
+    LAYER 2: Vercel Scraper API (remote fallback - no bot detection)
     """
     cached = _stream_cache.get(video_id)
     if cached and cached.get("expires_at", 0) > time.time():
@@ -221,9 +217,6 @@ def _extract_stream_url(video_id: str) -> dict:
     title_res = video_id
 
     # ── LAYER 0: InnerTube direct API ────────────────────────────────────────
-    # This is a proper server-to-server JSON API call to YouTube's internal API.
-    # It is NOT browser scraping so Render IP bans do NOT affect it.
-    # Works reliably as long as cookies are fresh (re-export every ~2 weeks).
     try:
         logger.info(f"🔍 Layer 0: InnerTube API for {video_id}...")
         result = _innertube_extract(video_id)
@@ -236,43 +229,10 @@ def _extract_stream_url(video_id: str) -> dict:
     except Exception as e:
         logger.warning(f"⚠️ Layer 0 (InnerTube) failed: {str(e)[:120]}")
 
-    # ── LAYER 1: yt-dlp multi-client fallback ────────────────────────────────
-    if not url:
-        clients_to_test = [
-            ['client=tv,android'],
-            ['player_client=android'],
-            ['client=ios,web'],
-            ['client=android_vr'],
-        ]
-        for client_arg in clients_to_test:
-            try:
-                logger.info(f"🔍 Layer 1: yt-dlp ({client_arg[0]}) for {video_id}...")
-                ydl_opts = {
-                    'format': 'bestaudio/best',
-                    'quiet': True,
-                    'no_warnings': True,
-                    'extract_flat': False,
-                    'source_address': '0.0.0.0',
-                    'cookiefile': 'cookies.txt' if os.path.exists('cookies.txt') else None,
-                    'extractor_args': {'youtube': client_arg}
-                }
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(f"https://music.youtube.com/watch?v={video_id}", download=False)
-                    if info and info.get('url'):
-                        url = info.get('url')
-                        ext = info.get('ext', 'webm')
-                        http_headers = info.get('http_headers', {"User-Agent": "Mozilla/5.0"})
-                        title_res = info.get('title', video_id)
-                        logger.info(f"🎵 Layer 1 yt-dlp SUCCESS ({client_arg[0]}) for {video_id}")
-                        break
-            except Exception as e:
-                logger.warning(f"⚠️ Layer 1 yt-dlp {client_arg[0]} failed: {str(e)[:100]}")
-                continue
-
-    # ── LAYER 2: pytubefix ────────────────────────────────────────────────────
+    # ── LAYER 1: pytubefix ────────────────────────────────────────────────────
     if not url:
         try:
-            logger.info(f"🔍 Layer 2: pytubefix for {video_id}...")
+            logger.info(f"🔍 Layer 1: pytubefix for {video_id}...")
             from pytubefix import YouTube
             yt = YouTube(f"https://music.youtube.com/watch?v={video_id}", use_oauth=False, allow_oauth_cache=False)
             audio_streams = yt.streams.filter(only_audio=True).order_by('abr').desc()
@@ -282,9 +242,30 @@ def _extract_stream_url(video_id: str) -> dict:
                 ext = "m4a" if "mp4" in best_audio.mime_type else "webm"
                 http_headers = {"User-Agent": "Mozilla/5.0"}
                 title_res = yt.title or video_id
-                logger.info(f"🎵 Layer 2 pytubefix SUCCESS for {video_id}")
+                logger.info(f"🎵 Layer 1 pytubefix SUCCESS for {video_id}")
         except Exception as e:
-            logger.error(f"⚠️ Layer 2 pytubefix failed: {str(e)[:100]}")
+            logger.warning(f"⚠️ Layer 1 pytubefix failed: {str(e)[:100]}")
+
+    # ── LAYER 2: Vercel Scraper API (no bot detection) ─────────────────────────
+    if not url:
+        try:
+            logger.info(f"🔍 Layer 2: Vercel Scraper for {video_id}...")
+            scraper_url = f"https://grooviaytmusic.vercel.app/audio/{video_id}?quality=high"
+            resp = httpx.get(scraper_url, timeout=15, follow_redirects=True)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("success") and data.get("data", {}).get("url"):
+                    url = data["data"]["url"]
+                    ext = data["data"].get("mimeType", "webm").split("/")[-1]
+                    if ext == "webm":
+                        ext = "webm"
+                    elif ext == "mp4":
+                        ext = "m4a"
+                    http_headers = {"User-Agent": "Mozilla/5.0"}
+                    title_res = data["data"].get("title", video_id)
+                    logger.info(f"🎵 Layer 2 Vercel Scraper SUCCESS for {video_id}")
+        except Exception as e:
+            logger.warning(f"⚠️ Layer 2 Vercel Scraper failed: {str(e)[:100]}")
 
     if url:
         cache_data = {
@@ -295,7 +276,7 @@ def _extract_stream_url(video_id: str) -> dict:
         _stream_cache[video_id] = cache_data
         return cache_data
 
-    raise ValueError(f"All 3 layers exhausted for {video_id}. Cookies may be expired — re-export from browser.")
+    raise ValueError(f"All 3 layers exhausted for {video_id}. No working stream found.")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Root
