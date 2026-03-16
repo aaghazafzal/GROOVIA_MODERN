@@ -372,8 +372,8 @@ async def stream_audio(
     title: str = "song"
 ):
     """
-    Proxy-streams audio from YouTube using yt-dlp.
-    Exact MUZIFY approach.
+    Proxy-streams audio from YouTube.
+    Forwards Content-Range + Content-Length for proper HTML5 audio seekability.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -382,18 +382,17 @@ async def stream_audio(
         http_headers = data.get("http_headers", {})
         ext = data.get("ext", "webm")
 
+        # Build upstream request headers
         req_headers = {
             "User-Agent": http_headers.get(
                 "User-Agent",
                 "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 Chrome/112.0.0.0 Safari/537.36",
             ),
         }
-        
-        # Pass range if available
-        if range:
-            req_headers["Range"] = range
-        elif request_range:
-            req_headers["Range"] = request_range
+
+        # Always include Range so YouTube returns Content-Range + Content-Length
+        range_header = range or request_range or "bytes=0-"
+        req_headers["Range"] = range_header
 
         content_type_map = {
             "m4a": "audio/mp4",
@@ -403,37 +402,55 @@ async def stream_audio(
         }
         content_type = content_type_map.get(ext, "audio/webm")
 
-        import httpx
+        # Open the upstream request (non-streaming first to grab headers)
+        upstream_client = httpx.AsyncClient(timeout=60)
+        upstream_resp = await upstream_client.send(
+            upstream_client.build_request("GET", url, headers=req_headers),
+            stream=True,
+            follow_redirects=True,
+        )
 
-        async def proxy_stream():
-            async with httpx.AsyncClient(timeout=30) as client:
-                async with client.stream(
-                    "GET", url, headers=req_headers, follow_redirects=True
-                ) as resp:
-                    async for chunk in resp.aiter_bytes(chunk_size=65536):
-                        yield chunk
-
-        headers = {
+        # Build response headers, forwarding critical ones from upstream
+        resp_headers = {
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET, OPTIONS",
             "Access-Control-Allow-Headers": "*",
             "Accept-Ranges": "bytes",
             "Cache-Control": "no-cache",
         }
-        
-        status_code = 206 if (range or request_range) else 200
+        for h in ("Content-Length", "Content-Range", "Content-Type"):
+            val = upstream_resp.headers.get(h)
+            if val:
+                resp_headers[h] = val
+
+        # Override with our known content-type if upstream didn't send a good one
+        if not resp_headers.get("Content-Type", "").startswith("audio"):
+            resp_headers["Content-Type"] = content_type
+
+        status_code = upstream_resp.status_code
+        if status_code not in (200, 206):
+            status_code = 206
 
         if download:
             safe_title = "".join(c for c in title if c.isalnum() or c in " -_").strip()
-            headers["Content-Disposition"] = f'attachment; filename="{safe_title or videoId}.{ext}"'
-            headers["Access-Control-Expose-Headers"] = "Content-Disposition"
-            status_code = 200  # downloads are usually full files
+            resp_headers["Content-Disposition"] = f'attachment; filename="{safe_title or videoId}.{ext}"'
+            resp_headers["Access-Control-Expose-Headers"] = "Content-Disposition"
+            status_code = 200
 
+        async def proxy_stream():
+            try:
+                async for chunk in upstream_resp.aiter_bytes(chunk_size=65536):
+                    yield chunk
+            finally:
+                await upstream_resp.aclose()
+                await upstream_client.aclose()
+
+        logger.info(f"🎧 Streaming {videoId} [{ext}] status={status_code} range={range_header}")
         return StreamingResponse(
             proxy_stream(),
             status_code=status_code,
             media_type=content_type,
-            headers=headers,
+            headers=resp_headers,
         )
 
     except HTTPException:
