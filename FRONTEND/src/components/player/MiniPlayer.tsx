@@ -68,8 +68,8 @@ const MiniPlayer = () => {
         const safeTitle = encodeURIComponent(songTitle);
 
         if (isYoutube && currentSong.youtubeId) {
-            // YT Music song — use Vercel scraper (faster, no bot detection)
-            downloadUrl = `${YT_SCRAPER_URL}/audio/${currentSong.youtubeId}?redirect=true`;
+            // YT Music song — use Backend
+            downloadUrl = `${YT_API_URL}/download?videoId=${currentSong.youtubeId}&title=${safeTitle}`;
         } else if (currentSong.downloadUrl && currentSong.downloadUrl.length > 0) {
             // Saavn/JioSaavn song — use highest quality downloadUrl
             const best = currentSong.downloadUrl.find(d => d.quality === '320kbps') ||
@@ -115,9 +115,9 @@ const MiniPlayer = () => {
             setAudioUrl(''); // Reset
 
             if (isYoutube) {
-                // Vercel scraper is PRIMARY — works everywhere (no bot detection on Vercel IPs)
-                // Render/local backend is FALLBACK — Render gets blocked by YouTube on datacenter IPs
-                setAudioUrl(`${YT_SCRAPER_URL}/stream/${currentSong.youtubeId}?quality=high`);
+                // Render/local backend is PRIMARY — has Deno installed for JS cipher decryption
+                // Vercel scraper is FALLBACK — lacks JS engine, fails on official music videos
+                setAudioUrl(`${YT_API_URL}/stream?videoId=${currentSong.youtubeId}&quality=high`);
                 return;
             }
 
@@ -429,13 +429,13 @@ const MiniPlayer = () => {
                         console.error('Audio error:', e);
                         // Auto-retry with fallback
                         if (currentSong?.youtubeId) {
-                            if (audioUrl?.includes(YT_SCRAPER_URL)) {
-                                // Vercel scraper failed → try Render/local backend
-                                console.log('🔄 Vercel scraper failed, retrying with backend...');
-                                setAudioUrl(`${YT_API_URL}/stream?videoId=${currentSong.youtubeId}`);
-                            } else if (audioUrl?.includes(YT_API_URL)) {
+                            if (audioUrl?.includes(YT_API_URL)) {
+                                // Backend failed → try Vercel scraper fallback
+                                console.log('🔄 Backend stream failed, retrying with Vercel scraper...');
+                                setAudioUrl(`${YT_SCRAPER_URL}/stream/${currentSong.youtubeId}?quality=high`);
+                            } else if (audioUrl?.includes(YT_SCRAPER_URL)) {
                                 // Both failed
-                                console.error('❌ Both Vercel scraper and backend failed for YT song');
+                                console.error('❌ Both backend and Vercel scraper failed for YT song');
                                 setError(true);
                             } else {
                                 setError(true);
