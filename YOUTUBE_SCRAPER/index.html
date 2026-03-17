@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YT Scraper API UI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --surface-color: #1e293b;
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #10b981;
+            --danger-color: #ef4444;
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--surface-color);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            animation: fadeIn 0.5s ease;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 0.5rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 2rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            border: 1px solid #334155;
+            background-color: #0f172a;
+            color: var(--text-primary);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+
+        button {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: var(--border-radius);
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button:disabled {
+            background-color: #475569;
+            cursor: not-allowed;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+            color: var(--text-secondary);
+        }
+
+        /* Spinner */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border-left-color: var(--primary-color);
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-container {
+            display: none;
+            margin-top: 2rem;
+        }
+
+        .video-meta {
+            display: flex;
+            gap: 1.5rem;
+            background-color: #0f172a;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 2rem;
+            align-items: center;
+        }
+
+        .video-meta img {
+            width: 120px;
+            border-radius: 8px;
+        }
+
+        .meta-info h3 {
+            margin-bottom: 0.5rem;
+        }
+        .meta-info p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .links-section {
+            margin-bottom: 2rem;
+        }
+
+        .links-section h2 {
+            border-bottom: 1px solid #334155;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+
+        .badge-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .link-card {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .link-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            background-color: #1e293b;
+        }
+
+        .quality {
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+        
+        .type {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .size {
+            font-size: 0.8rem;
+            color: var(--accent-color);
+        }
+
+        .audio-only-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .audio-only-card:hover {
+            border-color: var(--accent-color);
+        }
+
+        .error-msg {
+            display: none;
+            color: var(--danger-color);
+            background-color: rgba(239, 68, 68, 0.1);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-top: 1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>YT Scraper API</h1>
+        <p class="subtitle">Extract Direct Video & MP4 Audio Links Faster</p>
+
+        <div class="input-group">
+            <input type="text" id="videoInput" placeholder="Enter YouTube URL or Video ID (e.g., dQw4w9WgXcQ)">
+            <button id="extractBtn">Extract Links</button>
+        </div>
+
+        <div id="errorMsg" class="error-msg"></div>
+
+        <div id="loader" class="loader">
+            <div class="spinner"></div>
+            <p>Bypassing protections & extracting streams...</p>
+        </div>
+
+        <div id="resultContainer" class="result-container">
+            <div class="video-meta" id="videoMeta">
+                <!-- Meta injected here -->
+            </div>
+
+            <div class="links-section">
+                <h2>🎧 Audio Only (MP4 / M4A)</h2>
+                <div class="badge-grid" id="audioGrid">
+                    <!-- Audio links here -->
+                </div>
+            </div>
+
+            <div class="links-section">
+                <h2>🎬 Video Streams</h2>
+                <div class="badge-grid" id="videoGrid">
+                    <!-- Video links here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function extractVideoId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            if (match && match[2].length === 11) {
+                return match[2];
+            }
+            if (url.length === 11) {
+                return url; // Assuming it's already an ID
+            }
+            return null;
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes) return 'Unknown Size';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatDuration(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            return `${h > 0 ? h + ':' : ''}${m < 10 && h > 0 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+
+        document.getElementById('extractBtn').addEventListener('click', async () => {
+            const inputVal = document.getElementById('videoInput').value.trim();
+            const videoId = extractVideoId(inputVal);
+            
+            const btn = document.getElementById('extractBtn');
+            const loader = document.getElementById('loader');
+            const resultContainer = document.getElementById('resultContainer');
+            const errorMsg = document.getElementById('errorMsg');
+            
+            if (!videoId) {
+                errorMsg.textContent = 'Invalid YouTube URL or ID';
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            // Reset UI
+            errorMsg.style.display = 'none';
+            resultContainer.style.display = 'none';
+            btn.disabled = true;
+            loader.style.display = 'block';
+
+            try {
+                // Fetch from our API endpoint
+                const response = await fetch(`/extract/${videoId}`);
+                const res = await response.json();
+
+                if (!response.ok || !res.success) {
+                    throw new Error(res.detail || 'Failed to extract video');
+                }
+
+                const data = res.data;
+
+                // Set Meta
+                document.getElementById('videoMeta').innerHTML = `
+                    <img src="${data.thumbnail}" alt="Thumbnail">
+                    <div class="meta-info">
+                        <h3>${data.title}</h3>
+                        <p>Duration: ${formatDuration(data.duration)}</p>
+                    </div>
+                `;
+
+                // Set Audio Links (Filter for m4a/mp4)
+                const audioGrid = document.getElementById('audioGrid');
+                audioGrid.innerHTML = '';
+                
+                // Sort highest bitrate first
+                const audios = data.audio_streams || [];
+                
+                if (audios.length > 0) {
+                    audios.forEach((audio, idx) => {
+                        const isMp4 = audio.mimeType.includes('mp4') || audio.mimeType.includes('m4a');
+                        
+                        audioGrid.innerHTML += `
+                            <a href="${audio.url}" target="_blank" class="link-card ${isMp4 ? 'audio-only-card' : ''}">
+                                <div class="quality">${audio.bitrate}</div>
+                                <div class="type">${isMp4 ? 'MP4 Audio' : audio.mimeType.split('/')[1].toUpperCase()}</div>
+                                <div class="size">${formatBytes(audio.size)}</div>
+                            </a>
+                        `;
+                    });
+                } else {
+                    audioGrid.innerHTML = '<p style="color:var(--text-secondary)">No separate audio streams found.</p>';
+                }
+
+                // Set Video Links
+                const videoGrid = document.getElementById('videoGrid');
+                videoGrid.innerHTML = '';
+                const videos = data.video_streams || [];
+
+                if (videos.length > 0) {
+                    videos.forEach((video) => {
+                        videoGrid.innerHTML += `
+                            <a href="${video.url}" target="_blank" class="link-card">
+                                <div class="quality">${video.quality}</div>
+                                <div class="type">${video.mimeType.split('/')[1].toUpperCase()} • ${video.type === 'progressive' ? 'Video+Audio' : 'Video Only'}</div>
+                                <div class="size">${formatBytes(video.size)}</div>
+                            </a>
+                        `;
+                    });
+                } else {
+                    videoGrid.innerHTML = '<p style="color:var(--text-secondary)">No video streams found.</p>';
+                }
+
+                // Show Results
+                resultContainer.style.display = 'block';
+            } catch (err) {
+                errorMsg.textContent = err.message || 'An error occurred during extraction.';
+                errorMsg.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        });
+        
+        // Handle Enter key
+        document.getElementById('videoInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('extractBtn').click();
+            }
+        });
+    </script>
+</body>
+</html>

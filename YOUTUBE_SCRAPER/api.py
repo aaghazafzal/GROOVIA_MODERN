@@ -4,9 +4,11 @@ FastAPI wrapper for YouTube scraper
 
 from fastapi import FastAPI, HTTPException, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, RedirectResponse
+from fastapi.responses import StreamingResponse, RedirectResponse, HTMLResponse
 import httpx
 import logging
+import os
+from html_ui import HTML_CONTENT
 
 from scraper import extract_streams, get_best_audio, get_best_video, get_audio_by_quality
 
@@ -30,17 +32,7 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {
-        "message": "YouTube Direct Link Scraper API",
-        "version": "1.0.0",
-        "endpoints": {
-            "/extract/{video_id}": "Get all streams",
-            "/audio/{video_id}": "Get best audio URL",
-            "/video/{video_id}": "Get best video URL",
-            "/stream/{video_id}": "Proxy stream audio",
-            "/health": "Health check"
-        }
-    }
+    return HTMLResponse(content=HTML_CONTENT)
 
 @app.get("/health")
 def health():

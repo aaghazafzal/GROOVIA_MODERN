@@ -56,7 +56,11 @@ def _build_ydl_opts(fmt: str = "bestaudio/best") -> dict:
         "skip_download": True,
         "noplaylist": True,
         "format": fmt,
-        # Default client + cookies bypasses YouTube protections fine on Vercel
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "ios"]
+            }
+        }
     }
     if _COOKIES_FILE and os.path.exists(_COOKIES_FILE):
         opts["cookiefile"] = _COOKIES_FILE
